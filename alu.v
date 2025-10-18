@@ -1,5 +1,5 @@
 module alu(
-  input  wire [11:0] alu_op,
+  input  wire [14:0] alu_op,
   input  wire [31:0] alu_src1,
   input  wire [31:0] alu_src2,
   output wire [31:0] alu_result
@@ -17,6 +17,9 @@ wire op_sll;   //logic left shift
 wire op_srl;   //logic right shift
 wire op_sra;   //arithmetic right shift
 wire op_lui;   //Load Upper Immediate
+wire op_mul;
+wire op_mulh;
+wire op_mulhu;
 
 // control code decomposition
 assign op_add  = alu_op[ 0];
@@ -31,6 +34,9 @@ assign op_sll  = alu_op[ 8];
 assign op_srl  = alu_op[ 9];
 assign op_sra  = alu_op[10];
 assign op_lui  = alu_op[11];
+assign op_mul  = alu_op[12];
+assign op_mulh = alu_op[13];
+assign op_mulhu= alu_op[14];
 
 wire [31:0] add_sub_result;
 wire [31:0] slt_result;
@@ -93,6 +99,16 @@ assign sr64_result = {{32{op_sra & alu_src1[31]}}, alu_src1[31:0]} >> alu_src2[4
  */
 assign sr_result   = sr64_result[31:0];
 
+// mul
+wire signed [31:0] signed_src1 = alu_src1;
+wire signed [31:0] signed_src2 = alu_src2;
+wire [63:0] mul_signed_result  = signed_src1 * signed_src2;
+wire [63:0] mul_unsigned_result = alu_src1 * alu_src2;
+
+wire [31:0] mul_result   = mul_signed_result[31:0];   // mul.w
+wire [31:0] mulh_result  = mul_signed_result[63:32];  // mulh.w
+wire [31:0] mulhu_result = mul_unsigned_result[63:32];// mulh.wu
+
 // final result mux
 assign alu_result = ({32{op_add|op_sub}} & add_sub_result)
                   | ({32{op_slt       }} & slt_result)
@@ -103,6 +119,9 @@ assign alu_result = ({32{op_add|op_sub}} & add_sub_result)
                   | ({32{op_xor       }} & xor_result)
                   | ({32{op_lui       }} & lui_result)
                   | ({32{op_sll       }} & sll_result)
-                  | ({32{op_srl|op_sra}} & sr_result);
+                  | ({32{op_srl|op_sra}} & sr_result)
+                  | ({32{op_mul       }} & mul_result)
+                  | ({32{op_mulh      }} & mulh_result)
+                  | ({32{op_mulhu     }} & mulhu_result);
 
 endmodule
