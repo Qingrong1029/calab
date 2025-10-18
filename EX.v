@@ -15,7 +15,7 @@ module EX (
     output  [31:0]  data_sram_addr,
     output  [31:0]  data_sram_wdata,
 
-    output  [38:0]  ex_id_bus
+    output  [39:0]  ex_id_bus
 );
 
     reg             ex_valid;

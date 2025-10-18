@@ -9,11 +9,11 @@
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [179:0] id_ex_bus,
+    output  [186:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
-    input   [ 38:0] ex_id_bus
+    input   [ 39:0] ex_id_bus
 );
     reg             id_valid;
     wire            id_ready_go;
@@ -33,8 +33,10 @@
     wire    [31:0]  mem_wdata;
     wire    [ 4:0]  ex_dest;
     wire    [ 4:0]  mem_dest;
-    
-    assign { ex_bypass , ex_ld , ex_dest , ex_wdata } =  ex_id_bus;
+    wire            ex_div_busy;
+
+    //增加除法器忙信号
+    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy } =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata } = mem_id_bus;
     
     assign id_ex_valid = id_ready_go & id_valid;
@@ -57,7 +59,7 @@
     end
     assign {id_pc, id_inst} = if_id_bus_vld;
     //译码
-    wire [11:0] alu_op;
+    wire [14:0] alu_op;
     wire        src1_is_pc;
     wire        src2_is_imm;
     wire        res_from_mem;
@@ -147,6 +149,11 @@
     wire [31:0] alu_src1   ;
     wire [31:0] alu_src2   ;
 
+    // 除法器控制信号
+    wire        id_div_en;       // 是否使用除法器
+    wire [2:0]  id_div_op;       // 操作类型：000 div.w, 001 mod.w, 010 div.wu, 011 mod.wu
+
+
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
     assign op_21_20  = id_inst[21:20];
@@ -218,6 +225,19 @@
     assign alu_op[ 9] = inst_srli_w | inst_srl_w;
     assign alu_op[10] = inst_srai_w | inst_sra_w;
     assign alu_op[11] = inst_lu12i_w;
+    
+    // ALU expansion
+    assign alu_op[12] = inst_mul_w;
+    assign alu_op[13] = inst_mulh_w;
+    assign alu_op[14] = inst_mulh_wu;
+
+    //除法器调用
+    assign id_div_en =  inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
+    assign id_div_op =  inst_div_w  ? 3'b000 :
+                        inst_mod_w  ? 3'b001 :
+                        inst_div_wu ? 3'b010 :
+                        inst_mod_wu ? 3'b011 : 3'b111;
+
 
     assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
     assign need_si12  =  inst_addi_w | inst_ld_w | inst_st_w | inst_slti | inst_sltui;
@@ -299,24 +319,29 @@
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
+    //修改：增加除法器传递信号
     assign id_ex_bus = {
         id_gr_we, mem_we, res_from_mem, 
-        alu_op, alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc
+        alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
+        id_dest, rkd_value, id_inst, id_pc,    
     };
+
     assign id_if_bus = {
         br_taken & id_ready_go , br_target
     };
     
-    assign id_ready_go = ~(ex_ld & 
+    assign id_ready_go = ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)));
+                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
+                         | ex_div_busy );  // 只要 EX 报 busy，就阻塞 ID 发射
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_st_w | inst_bne  | inst_beq | inst_jirl |
                           inst_slti | inst_sltui | inst_andi | inst_ori | inst_xori | 
-                          inst_sll_w | inst_srl_w |inst_sra_w | inst_pcaddu12i;
+                          inst_sll_w | inst_srl_w |inst_sra_w | inst_pcaddu12i| inst_mul_w | inst_mulh_w | inst_mulh_wu
+                    | inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
-                          inst_xor | inst_st_w | inst_beq | inst_bne | inst_sll_w | inst_srl_w | inst_sra_w;
+                          inst_xor | inst_st_w | inst_beq | inst_bne | inst_sll_w | inst_srl_w | inst_sra_w| inst_mul_w | inst_mulh_w | inst_mulh_wu
+                    | inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
 
 endmodule
