@@ -323,7 +323,7 @@
     assign id_ex_bus = {
         id_gr_we, mem_we, res_from_mem, 
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc,    
+        id_dest, rkd_value, id_inst, id_pc    
     };
 
     assign id_if_bus = {
