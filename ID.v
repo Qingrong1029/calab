@@ -9,7 +9,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [190:0] id_ex_bus,
+    output  [191:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
@@ -370,7 +370,7 @@ module ID (
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //修改：增加除法器传递信号
     assign id_ex_bus = {
-        id_gr_we, inst_st_b, inst_st_h, res_from_mem, mem_type,
+        id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
         id_dest, rkd_value, id_inst, id_pc    
     };
