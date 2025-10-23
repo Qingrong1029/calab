@@ -1,4 +1,4 @@
- module ID (
+module ID (
     input           clk,
     input           resetn,
 
@@ -9,7 +9,7 @@
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [189:0] id_ex_bus,
+    output  [190:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
@@ -22,7 +22,8 @@
     wire            br_taken;
     wire    [31:0]  br_target;
     reg     [63:0]  if_id_bus_vld;
-    wire [2:0] mem_type;  // 000: word, 001: halfword, 010: byte, 1xx: unsigned
+    
+    wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
     
     //conflict
     wire            need_addr1;
@@ -35,7 +36,7 @@
     wire    [ 4:0]  ex_dest;
     wire    [ 4:0]  mem_dest;
     wire            ex_div_busy;
-
+    
     assign mem_type = inst_ld_w  ? 3'b000 :  // word
                   inst_st_w  ? 3'b000 :  // word
                   inst_ld_h  ? 3'b001 :  // halfword
@@ -45,8 +46,7 @@
                   inst_st_b  ? 3'b010 :  // byte
                   inst_ld_bu ? 3'b110 :  // byte unsigned
                   3'b000;
-
-    //增加除法器忙信号
+    
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy } =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata } = mem_id_bus;
     
@@ -76,7 +76,6 @@
     wire        res_from_mem;
     wire        dst_is_r1;
     wire        id_gr_we;
-    wire        mem_we;
     wire        src_reg_is_rd;
     wire [4:0]  id_dest;
     wire [31:0] rj_value;
@@ -119,9 +118,9 @@
     wire        inst_ld_h; 
     wire        inst_ld_bu;
     wire        inst_ld_hu;
+    wire        inst_st_w;
     wire        inst_st_b;
     wire        inst_st_h;
-    wire        inst_st_w;
     wire        inst_jirl;
     wire        inst_b;
     wire        inst_bl;
@@ -207,13 +206,13 @@
     assign inst_srai_w = op_31_26_d[6'h00] & op_25_22_d[4'h1] & op_21_20_d[2'h0] & op_19_15_d[5'h11];
     assign inst_addi_w = op_31_26_d[6'h00] & op_25_22_d[4'ha];
     assign inst_ld_w   = op_31_26_d[6'h0a] & op_25_22_d[4'h2];
-    assign inst_ld_b  = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
-    assign inst_ld_h  = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
-    assign inst_ld_bu = op_31_26_d[6'h0a] & op_25_22_d[4'h8];
-    assign inst_ld_hu = op_31_26_d[6'h0a] & op_25_22_d[4'h9];
-    assign inst_st_b  = op_31_26_d[6'h0a] & op_25_22_d[4'h4];
-    assign inst_st_h  = op_31_26_d[6'h0a] & op_25_22_d[4'h5];
+    assign inst_ld_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h0];
+    assign inst_ld_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h1];
+    assign inst_ld_bu  = op_31_26_d[6'h0a] & op_25_22_d[4'h8];
+    assign inst_ld_hu  = op_31_26_d[6'h0a] & op_25_22_d[4'h9];
     assign inst_st_w   = op_31_26_d[6'h0a] & op_25_22_d[4'h6];
+    assign inst_st_b   = op_31_26_d[6'h0a] & op_25_22_d[4'h4];
+    assign inst_st_h   = op_31_26_d[6'h0a] & op_25_22_d[4'h5];
     assign inst_jirl   = op_31_26_d[6'h13];
     assign inst_b      = op_31_26_d[6'h14];
     assign inst_bl     = op_31_26_d[6'h15];
@@ -243,10 +242,10 @@
     assign inst_div_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h02];
     assign inst_mod_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h03];
     
-    assign alu_op[ 0] = inst_add_w | inst_addi_w | inst_ld_w | inst_st_w
-                        | inst_jirl | inst_bl | inst_pcaddu12i
-                        | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
-                    | inst_st_b | inst_st_h;      
+    assign alu_op[ 0] = inst_add_w | inst_addi_w
+                      | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
+                      | inst_st_w | inst_st_b | inst_st_h
+                      | inst_jirl | inst_bl | inst_pcaddu12i;
     assign alu_op[ 1] = inst_sub_w;
     assign alu_op[ 2] = inst_slt | inst_slti;
     assign alu_op[ 3] = inst_sltu | inst_sltui;
@@ -273,9 +272,8 @@
 
 
     assign need_ui5   =  inst_slli_w | inst_srli_w | inst_srai_w;
-    assign need_si12  =  inst_addi_w | inst_ld_w | inst_st_w | inst_slti | inst_sltui
-                    | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  // 新增
-                    | inst_st_b | inst_st_h;    
+    assign need_si12  =  inst_addi_w | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu
+                       | inst_st_w | inst_st_b | inst_st_h | inst_slti | inst_sltui;
     assign need_si16  =  inst_jirl | inst_beq | inst_bne;
     assign need_si20  =  inst_lu12i_w | inst_pcaddu12i;
     assign need_si26  =  inst_b | inst_bl;
@@ -294,33 +292,36 @@
 
     assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_blt | inst_bge | inst_bltu | inst_bgeu| inst_st_b | inst_st_h;  // 新增
+    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu;
+
     assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
     assign src2_is_imm   = inst_slli_w |
-                    inst_srli_w |
-                    inst_srai_w |
-                    inst_addi_w |
-                    inst_ld_w   |
-                    inst_st_w   |
-                    inst_lu12i_w|
-                    inst_jirl   |
-                    inst_bl     |
-                    inst_slti   |
-                    inst_sltui  |
-                    inst_andi   |
-                    inst_ori    |
-                    inst_xori   |   
-                    inst_pcaddu12i |
-                    inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |  // 新增
-                    inst_st_b | inst_st_h;  // 新增
+                        inst_srli_w |
+                        inst_srai_w |
+                        inst_addi_w |
+                        inst_ld_w   |
+                        inst_ld_b   |
+                        inst_ld_h   |
+                        inst_ld_bu  |
+                        inst_ld_hu  |
+                        inst_st_w   |
+                        inst_st_b   |
+                        inst_st_h   |
+                        inst_lu12i_w|
+                        inst_jirl   |
+                        inst_bl     |
+                        inst_slti   |
+                        inst_sltui  |
+                        inst_andi   |
+                        inst_ori    |
+                        inst_xori   |   
+                        inst_pcaddu12i;
                         
     assign res_from_mem  = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu;
     assign dst_is_r1     = inst_bl;
-    assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h &  
-                       ~inst_beq & ~inst_bne & ~inst_b &
+    assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b &
                        ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
-    assign mem_we        = inst_st_w | inst_st_b | inst_st_h;
     assign id_dest       = dst_is_r1 ? 5'd1 : rd;
 
     assign rf_raddr1 = rj;
@@ -369,10 +370,10 @@
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //修改：增加除法器传递信号
     assign id_ex_bus = {
-    id_gr_we, mem_we, res_from_mem, mem_type,  // 新增 mem_type
-    alu_op, id_div_en, id_div_op, alu_src1, alu_src2,
-    id_dest, rkd_value, id_inst, id_pc    
-};
+        id_gr_we, inst_st_b, inst_st_h, res_from_mem, mem_type,
+        alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
+        id_dest, rkd_value, id_inst, id_pc    
+    };
 
     assign id_if_bus = {
         br_taken & id_ready_go , br_target
@@ -382,20 +383,16 @@
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
                          | ex_div_busy );  // 只要 EX 报 busy，就阻塞 ID 发射
-
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
-                      inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
-                      inst_ld_w | inst_st_w | inst_bne  | inst_beq | inst_jirl |inst_blt | inst_bge | inst_bltu | inst_bgeu|
-                      inst_slti | inst_sltui | inst_andi | inst_ori | inst_xori | 
-                      inst_sll_w | inst_srl_w |inst_sra_w | inst_pcaddu12i| inst_mul_w | inst_mulh_w | inst_mulh_wu
-                      | inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu
-                      | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  // 新增
-                      | inst_st_b | inst_st_h;                          // 新增
-
+                          inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
+                          inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |
+                          inst_st_w | inst_st_b | inst_st_h | inst_bne  | inst_beq | inst_jirl |inst_blt | inst_bge | inst_bltu | inst_bgeu|
+                          inst_slti | inst_sltui | inst_andi | inst_ori | inst_xori | 
+                          inst_sll_w | inst_srl_w |inst_sra_w | inst_pcaddu12i| inst_mul_w | inst_mulh_w | inst_mulh_wu|
+                          inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
-                      inst_xor | inst_st_w | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|
-                      inst_sll_w | inst_srl_w | inst_sra_w| inst_mul_w | inst_mulh_w | inst_mulh_wu
-                      | inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu
-                      | inst_st_b | inst_st_h;  // 新增存储指令
+                          inst_xor | inst_st_w | inst_st_b | inst_st_h |
+                          inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
+                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
 
 endmodule

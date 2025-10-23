@@ -27,24 +27,25 @@ module MEM (
     wire    [ 31:0] alu_result;
     wire    [ 31:0] final_result;
     wire            mem_bypass;
-    wire [2:0] mem_type;      // 访存类型信息
-    wire [1:0] mem_addr_low2; // 访存地址最低两位
-    wire [31:0] selected_data;
-    wire [15:0] halfword_data;
-    wire [7:0]  byte_data;
-    wire [31:0] extended_data;
-
+    
+    wire    [  2:0] mem_type;      // 访存类型信息
+    wire    [  1:0] mem_addr_low2; // 访存地址最低两位
+    wire    [ 31:0] selected_data;
+    wire    [ 15:0] halfword_data;
+    wire    [  7:0] byte_data;
+    wire    [ 31:0] extended_data;
+    
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
 
     assign byte_data = (mem_addr_low2 == 2'b00) ? data_sram_rdata[7:0] :
-                   (mem_addr_low2 == 2'b01) ? data_sram_rdata[15:8] :
-                   (mem_addr_low2 == 2'b10) ? data_sram_rdata[23:16] :
-                   data_sram_rdata[31:24];
+                       (mem_addr_low2 == 2'b01) ? data_sram_rdata[15:8] :
+                       (mem_addr_low2 == 2'b10) ? data_sram_rdata[23:16] :
+                                                  data_sram_rdata[31:24];
 
     assign selected_data = (mem_type[1:0] == 2'b00) ? data_sram_rdata :  // word
-                       (mem_type[1:0] == 2'b01) ? {16'b0, halfword_data} :  // halfword
-                       {24'b0, byte_data};  // byte
-
+                           (mem_type[1:0] == 2'b01) ? {16'b0, halfword_data} :  // halfword
+                                                      {24'b0, byte_data};  // byte
+    
     wire [31:0] sign_extended_half = {{16{halfword_data[15]}}, halfword_data};
     wire [31:0] sign_extended_byte = {{24{byte_data[7]}}, byte_data};
     wire [31:0] zero_extended_half = {16'b0, halfword_data};
@@ -73,10 +74,10 @@ module MEM (
         end
     end
     assign {
-    mem_gr_we, res_from_mem, mem_type, mem_addr_low2,  // 新增两个信号
-    mem_dest, mem_pc, mem_inst, alu_result
-} = ex_mem_bus_vld;
-    assign final_result = res_from_mem ? extended_data : alu_result;
+        mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
+        mem_dest, mem_pc, mem_inst, alu_result
+    } = ex_mem_bus_vld;
+    assign  final_result = res_from_mem ? extended_data : alu_result;
     assign  mem_wb_bus = {
         mem_gr_we, mem_pc, mem_inst, final_result, mem_dest
     };

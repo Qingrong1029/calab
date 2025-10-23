@@ -19,14 +19,13 @@ module mycpu_top(
     output wire [ 4:0] debug_wb_rf_wnum,
     output wire [31:0] debug_wb_rf_wdata
 );
-    //修改相应位宽
     wire            id_allowin;
     wire            if_id_valid;
     wire    [ 63:0] if_id_bus;
     wire    [ 32:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [189:0] id_ex_bus;
+    wire    [190:0] id_ex_bus;
     wire    [ 37:0] wb_id_bus;
     wire    [107:0] ex_mem_bus;
     wire            ex_mem_valid;
