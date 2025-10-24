@@ -25,9 +25,9 @@ module mycpu_top(
     wire    [ 32:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [186:0] id_ex_bus;
+    wire    [191:0] id_ex_bus;
     wire    [ 37:0] wb_id_bus;
-    wire    [102:0] ex_mem_bus;
+    wire    [107:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
     wire            mem_wb_valid;

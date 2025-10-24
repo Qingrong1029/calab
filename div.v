@@ -7,7 +7,6 @@ module div (
     input  wire         clk,
     input  wire         resetn,
 
-    // Control inputs
     input  wire         ex_div_en,     // Division enable signal from EX stage
     input  wire [1:0]   ex_div_op,     // Division operation code:
                                         //   00 - signed division (div.s)
@@ -19,15 +18,12 @@ module div (
     input  wire [31:0]  signed_src1,
     input  wire [31:0]  signed_src2,
 
-    // Output results
     output wire [31:0]  div_result,
     output wire         div_busy,
     output wire         div_done
 );
 
-    //------------------------------------------------------------------
-    //  Wires for signed divider IP core
-    //------------------------------------------------------------------
+
     wire div_s_tvalid, div_s_tready, div_s_valid;
     wire [63:0] div_s_result;
 
@@ -44,9 +40,7 @@ module div (
         .m_axis_dout_tdata     (div_s_result)
     );
 
-    //------------------------------------------------------------------
-    //  Wires for unsigned divider IP core
-    //------------------------------------------------------------------
+
     wire div_u_tvalid, div_u_tready, div_u_valid;
     wire [63:0] div_u_result;
 

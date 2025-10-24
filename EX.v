@@ -4,11 +4,11 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [186:0] id_ex_bus,
+    input   [191:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
-    output  [102:0] ex_mem_bus,
+    output  [107:0] ex_mem_bus,
 
     output          data_sram_en,
     output  [ 3:0]  data_sram_we,
@@ -22,11 +22,13 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [186:0] id_ex_bus_vld;
+    reg     [191:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
+    wire    [  2:0] mem_type;
     
-    assign  ex_ready_go = (ex_div_en) ? div_done : 1'b1;;
+    //block
+    assign  ex_ready_go = (ex_div_en) ? div_done : 1'b1;
     assign  ex_mem_valid = ex_ready_go & ex_valid;
     assign  ex_allowin = ex_mem_valid & mem_allowin | ~ex_valid;
     always @(posedge clk ) begin
@@ -43,9 +45,8 @@ module EX (
         end
     end
 
-    wire             ex_gr_we;
-    wire             mem_we;
-    wire             res_from_mem;
+    wire            ex_gr_we;
+    wire            res_from_mem;
     wire    [14:0]  alu_op;
     wire            ex_div_en;
     wire    [ 2:0]  ex_div_op;
@@ -53,8 +54,14 @@ module EX (
     wire    [31:0]  alu_src2;
     wire    [ 4:0]  ex_dest;
     wire    [31:0]  rkd_value;
+    wire    [31:0]  st_data;
+    
+    wire            inst_st_w;
+    wire            inst_st_b;
+    wire            inst_st_h;
+    
     assign {
-        ex_gr_we, mem_we, res_from_mem,
+        ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
         ex_dest, rkd_value, ex_inst, ex_pc
     } = id_ex_bus_vld;
@@ -67,6 +74,7 @@ module EX (
         .alu_result(alu_result)
     );
     
+    wire [ 1:0] mem_addr_low2 = alu_result[1:0];
     wire [31:0] div_result;
     wire        div_busy;
     wire        div_done;
@@ -87,13 +95,25 @@ module EX (
 
     wire [31:0] ex_final_result = ex_div_en ? div_result : alu_result;
     
+    assign st_data = inst_st_b ? {4{rkd_value[ 7:0]}} :
+                     inst_st_h ? {2{rkd_value[15:0]}} :
+                                    rkd_value[31:0];
+    
     assign  data_sram_en = 1'b1;
-    assign  data_sram_we = {4{mem_we}};
-    assign  data_sram_addr = alu_result;
-    assign  data_sram_wdata = rkd_value;
+    assign  data_sram_we = inst_st_b ? (
+                                       mem_addr_low2 == 2'b00 ? 4'b0001 :
+                                       mem_addr_low2 == 2'b01 ? 4'b0010 :
+                                       mem_addr_low2 == 2'b10 ? 4'b0100 :
+                                                                4'b1000): 
+                           inst_st_h ? (
+                                       mem_addr_low2 == 2'b00 ? 4'b0011 :
+                                                                4'b1100): // alu_result[1:0] == 2'b10
+                           inst_st_w ? 4'b1111 : 4'b0000;  // st.w 指令;
+    assign  data_sram_addr = {alu_result[31:2],2'b00};
+    assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
-        ex_gr_we, res_from_mem, ex_dest,
-        ex_pc, ex_inst, ex_final_result
+        ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
+        ex_dest,ex_pc, ex_inst, ex_final_result
     };
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;
