@@ -4,11 +4,11 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [191:0] id_ex_bus,
+    input   [271:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
-    output  [107:0] ex_mem_bus,
+    output  [187:0] ex_mem_bus,
 
     output          data_sram_en,
     output  [ 3:0]  data_sram_we,
@@ -22,7 +22,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [191:0] id_ex_bus_vld;
+    reg     [271:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
@@ -55,6 +55,12 @@ module EX (
     wire    [ 4:0]  ex_dest;
     wire    [31:0]  rkd_value;
     wire    [31:0]  st_data;
+    //csr exp12
+    wire            ex_csr_we;
+    wire            ex_csr_re;
+    wire    [13:0]  ex_csr_num;
+    wire    [31:0]  ex_csr_wmask;
+    wire    [31:0]  ex_csr_wvalue;
     
     wire            inst_st_w;
     wire            inst_st_b;
@@ -63,7 +69,7 @@ module EX (
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue
     } = id_ex_bus_vld;
 
     wire    [31:0]  alu_result;
@@ -113,7 +119,7 @@ module EX (
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        ex_dest,ex_pc, ex_inst, ex_final_result
+        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue
     };
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;

@@ -63,15 +63,14 @@ module csr_reg (
     // 异常、返回
     input  wire        ertn_flush,
     input  wire        wb_ex,
-    input  wire [31:0] wb_pc,
+    input  wire [31:0] wb_csr_pc,
     input  wire [31:0] wb_vaddr,
     input  wire [5:0]  wb_ecode,
     input  wire [8:0]  wb_esubcode,
     output wire [31:0] ex_entry,
-
-    // 中断信号
+    
     input  wire [7:0]  hw_int_in,
-    input  wire        ipi_int_in
+    input              ipi_int_in
 );
 
     // ----------------------------------------
@@ -104,9 +103,6 @@ module csr_reg (
 
     // SAVE 寄存器
     reg [31:0] csr_save0, csr_save1, csr_save2, csr_save3;
-
-    // BADV
-    reg [31:0] csr_badv_vaddr;
 
     // ----------------------------------------
     // ====== 各域赋值逻辑 ======
@@ -176,7 +172,7 @@ module csr_reg (
     // ---------- ERA.PC ----------
     always @(posedge clk) begin
         if (wb_ex)
-            csr_era_pc <= wb_pc;
+            csr_era_pc <= wb_csr_pc;
         else if (csr_we && csr_num == `CSR_ERA)
             csr_era_pc <= (csr_wmask & csr_wvalue) | (~csr_wmask & csr_era_pc);
     end

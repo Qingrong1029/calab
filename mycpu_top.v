@@ -25,13 +25,13 @@ module mycpu_top(
     wire    [ 32:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [191:0] id_ex_bus;
+    wire    [271:0] id_ex_bus;
     wire    [ 37:0] wb_id_bus;
-    wire    [107:0] ex_mem_bus;
+    wire    [187:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
     wire            mem_wb_valid;
-    wire    [101:0] mem_wb_bus;
+    wire    [181:0] mem_wb_bus;
     wire            wb_allowin;
     wire    [ 37:0] mem_id_bus;
     wire    [ 40:0] ex_id_bus;
@@ -45,7 +45,7 @@ module mycpu_top(
     wire    [31:0]  csr_wvalue;
     wire    [31:0]  csr_wmask;
     wire            wb_ex;
-    wire    [31:0]  wb_pc; 
+    wire    [31:0]  wb_csr_pc; 
     wire            ertn_flush;
     wire    [5:0]   wb_ecode;
     wire    [8:0]   wb_esubcode;
@@ -119,7 +119,19 @@ module mycpu_top(
         .debug_wb_pc        (debug_wb_pc),
         .debug_wb_rf_we     (debug_wb_rf_we),
         .debug_wb_rf_wnum   (debug_wb_rf_wnum),
-        .debug_wb_rf_wdata  (debug_wb_rf_wdata)
+        .debug_wb_rf_wdata  (debug_wb_rf_wdata),
+        //csr
+        .csr_num            (csr_num),
+        .csr_re             (csr_re),
+        .csr_rvalue         (csr_rvalue),
+        .csr_we             (csr_we),
+        .csr_wvalue         (csr_wvalue),
+        .csr_wmask          (csr_wmask),
+        .ertn_flush         (ertn_flush),
+        .wb_ex              (wb_ex),
+        .wb_csr_pc          (wb_csr_pc),
+        .wb_ecode           (wb_ecode),
+        .wb_esubcode        (wb_esubcode)
     );
     csr_reg csr(
     .clk                (clk),
@@ -131,19 +143,17 @@ module mycpu_top(
     .csr_wmask          (csr_wmask),
     .csr_wvalue         (csr_wvalue),
 
-    .ertn_pc            (ertn_pc),
     .ex_entry           (ex_entry),
     .ertn_flush         (ertn_flush),
 
     .wb_ex              (wb_ex),
-    .wb_pc              (wb_pc),
+    .wb_csr_pc          (wb_csr_pc),
     .wb_vaddr           (wb_vaddr),
     .wb_ecode           (wb_ecode),
-    .wb_esubcode        (wb_esubcode), 
-    .coreid_in          (coreid_in),
-
-    .has_int            (has_int),
+    .wb_esubcode        (wb_esubcode),
+    
     .hw_int_in          (hw_int_in),
     .ipi_int_in         (ipi_int_in)
+    
 );
 endmodule

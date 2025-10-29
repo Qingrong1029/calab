@@ -9,7 +9,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [191:0] id_ex_bus,
+    output  [271:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
@@ -183,8 +183,14 @@ module ID (
     // 除法器控制信号
     wire        id_div_en;       // 是否使用除法器
     wire [2:0]  id_div_op;       // 操作类型：000 div.w, 001 mod.w, 010 div.wu, 011 mod.wu
-
-
+    
+    //csr exp12
+    wire        id_csr_we;
+    wire        id_csr_re;
+    wire [13:0] id_csr_num;
+    wire [31:0] id_csr_wmask;
+    wire [31:0] id_csr_wvalue;
+    
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
     assign op_21_20  = id_inst[21:20];
@@ -389,11 +395,18 @@ module ID (
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
+    //csr exp12
+    assign id_csr_re  = inst_csrrd;
+    assign id_csr_we  = inst_csrwr | inst_csrxchg;
+    assign id_csr_num = id_inst[23:10];
+    assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;
+    assign id_csr_wvalue = inst_csrxchg ? rkd_value : rj_value;
+
     //修改：增加除法器传递信号
     assign id_ex_bus = {
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc    
+        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue
     };
 
     assign id_if_bus = {
