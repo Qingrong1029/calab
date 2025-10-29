@@ -34,7 +34,27 @@ module mycpu_top(
     wire    [101:0] mem_wb_bus;
     wire            wb_allowin;
     wire    [ 37:0] mem_id_bus;
-    wire    [ 39:0] ex_id_bus;
+    wire    [ 40:0] ex_id_bus;
+    
+    wire    [13:0]  csr_num;
+    wire            csr_re;
+    wire    [31:0]  csr_rvalue;
+    wire    [31:0]  ertn_pc;
+    wire    [31:0]  ex_entry;
+    wire            csr_we;
+    wire    [31:0]  csr_wvalue;
+    wire    [31:0]  csr_wmask;
+    wire            wb_ex;
+    wire    [31:0]  wb_pc; 
+    wire            ertn_flush;
+    wire    [5:0]   wb_ecode;
+    wire    [8:0]   wb_esubcode;
+    wire    [31:0]  wb_vaddr;
+    wire    [31:0]  coreid_in;
+    wire            has_int;
+    wire    [7:0]   hw_int_in  = 8'b0;
+    wire            ipi_int_in = 1'b0;
+    
     IF my_IF (
         .clk                (clk),
         .resetn             (resetn),
@@ -101,4 +121,29 @@ module mycpu_top(
         .debug_wb_rf_wnum   (debug_wb_rf_wnum),
         .debug_wb_rf_wdata  (debug_wb_rf_wdata)
     );
+    csr_reg csr(
+    .clk                (clk),
+    .reset              (reset),
+    .csr_re             (csr_re),
+    .csr_num            (csr_num),
+    .csr_rvalue         (csr_rvalue),
+    .csr_we             (csr_we),
+    .csr_wmask          (csr_wmask),
+    .csr_wvalue         (csr_wvalue),
+
+    .ertn_pc            (ertn_pc),
+    .ex_entry           (ex_entry),
+    .ertn_flush         (ertn_flush),
+
+    .wb_ex              (wb_ex),
+    .wb_pc              (wb_pc),
+    .wb_vaddr           (wb_vaddr),
+    .wb_ecode           (wb_ecode),
+    .wb_esubcode        (wb_esubcode), 
+    .coreid_in          (coreid_in),
+
+    .has_int            (has_int),
+    .hw_int_in          (hw_int_in),
+    .ipi_int_in         (ipi_int_in)
+);
 endmodule

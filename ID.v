@@ -47,7 +47,7 @@ module ID (
                   inst_ld_bu ? 3'b110 :  // byte unsigned
                   3'b000;
     
-    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy } =  ex_id_bus;
+    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy} =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata } = mem_id_bus;
     
     assign id_ex_valid = id_ready_go & id_valid;
@@ -88,6 +88,8 @@ module ID (
     wire [ 3:0] op_25_22;
     wire [ 1:0] op_21_20;
     wire [ 4:0] op_19_15;
+    wire [ 1:0] op_25_24;
+    wire [ 4:0] op_9_5;//exp12
     wire [ 4:0] rd;
     wire [ 4:0] rj;
     wire [ 4:0] rk;
@@ -100,6 +102,8 @@ module ID (
     wire [15:0] op_25_22_d;
     wire [ 3:0] op_21_20_d;
     wire [31:0] op_19_15_d;
+    wire [ 3:0] op_25_24_d;
+    wire [31:0] op_9_5_d;//exp12
 
     wire        inst_add_w;
     wire        inst_sub_w;
@@ -149,6 +153,13 @@ module ID (
     wire        inst_mod_w;
     wire        inst_div_wu;
     wire        inst_mod_wu;
+    
+    //csr exp12
+    wire        inst_csrrd;
+    wire        inst_csrwr;
+    wire        inst_csrxchg;
+    wire        inst_ertn;
+    wire        syscall;
 
     wire        need_ui5;
     wire        need_si12;
@@ -178,6 +189,8 @@ module ID (
     assign op_25_22  = id_inst[25:22];
     assign op_21_20  = id_inst[21:20];
     assign op_19_15  = id_inst[19:15];
+    assign op_25_34  = id_inst[25:24];
+    assign op_9_5    = id_inst[9:5];
 
     assign rd   = id_inst[ 4: 0];
     assign rj   = id_inst[ 9: 5];
@@ -192,6 +205,8 @@ module ID (
     decoder_4_16 u_dec1(.in(op_25_22 ), .out(op_25_22_d ));
     decoder_2_4  u_dec2(.in(op_21_20 ), .out(op_21_20_d ));
     decoder_5_32 u_dec3(.in(op_19_15 ), .out(op_19_15_d ));
+    decoder_2_4  u_dec4(.in(op_25_24 ), .out(op_25_24_d ));
+    decoder_5_32 u_dec5(.in(op_9_5   ), .out(op_9_5_d   ));//exp12
 
     assign inst_add_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
     assign inst_sub_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
@@ -241,6 +256,12 @@ module ID (
     assign inst_mod_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h01];
     assign inst_div_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h02];
     assign inst_mod_wu = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h03];
+    //csr exp12
+    assign inst_csrrd  = op_31_26_d[6'h01] & op_25_24_d[2'h0] & op_9_5_d[5'h0];
+    assign inst_csrwr  = op_31_26_d[6'h01] & op_25_24_d[2'h0] & op_9_5_d[5'h1];
+    assign inst_csrxchg= op_31_26_d[6'h01] & op_25_24_d[2'h0] & ~op_9_5_d[5'h0] & ~op_9_5_d[5'h1];
+    assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & id_inst[14:10] == 5'b01110;
+    assign inst_syscall= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
     
     assign alu_op[ 0] = inst_add_w | inst_addi_w
                       | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
@@ -382,7 +403,7 @@ module ID (
     assign id_ready_go = ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy );  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy);  // 只要 EX 报 busy，就阻塞 ID 发射
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |
