@@ -13,7 +13,8 @@ module ID (
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
-    input   [ 39:0] ex_id_bus
+    input   [ 39:0] ex_id_bus,
+    input           ertn_flush
 );
     reg             id_valid;
     wire            id_ready_go;
@@ -50,10 +51,14 @@ module ID (
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy} =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata } = mem_id_bus;
     
-    assign id_ex_valid = id_ready_go & id_valid;
-    assign id_allowin = id_ex_valid & ex_allowin | ~id_valid;
+    assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush;;
+    assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;;
     always @(posedge clk ) begin
         if(~resetn ) begin
+            id_valid <= 1'b0;
+        end
+        else if (ertn_flush) begin
+            // ertn_flush时立即清空ID阶段
             id_valid <= 1'b0;
         end
         else if( br_taken & id_ready_go) begin
@@ -389,7 +394,8 @@ module ID (
                    || inst_jirl
                    || inst_bl
                    || inst_b
-                  ) & id_valid;
+                  ) & id_valid & ~ertn_flush;
+;
 
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
@@ -413,7 +419,8 @@ module ID (
         br_taken & id_ready_go , br_target
     };
     
-    assign id_ready_go = ~( (ex_ld & 
+    assign id_ready_go =  ertn_flush ? 1'b1 :
+                        ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
                          | ex_div_busy);  // 只要 EX 报 busy，就阻塞 ID 发射
