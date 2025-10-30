@@ -9,7 +9,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [271:0] id_ex_bus,
+    output  [272:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
 
     input   [ 37:0] mem_id_bus,
@@ -382,10 +382,10 @@ module ID (
     assign rj_eq_rd = (rj_value == rkd_value);
     assign br_taken = (   inst_beq  &&  rj_eq_rd
                    || inst_bne  && !rj_eq_rd
-                   || inst_blt  &&  rj_lt_rd_signed    // 新增
-                   || inst_bge  &&  rj_ge_rd_signed    // 新增
-                   || inst_bltu &&  rj_lt_rd_unsigned  // 新增  
-                   || inst_bgeu &&  rj_ge_rd_unsigned  // 新增
+                   || inst_blt  &&  rj_lt_rd_signed    
+                   || inst_bge  &&  rj_ge_rd_signed    
+                   || inst_bltu &&  rj_lt_rd_unsigned  
+                   || inst_bgeu &&  rj_ge_rd_unsigned  
                    || inst_jirl
                    || inst_bl
                    || inst_b
@@ -396,17 +396,17 @@ module ID (
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
-    assign id_csr_re  = inst_csrrd | inst_csrwr | inst_csrxchg; //这俩条指令是不是需要读csr返回旧值（？
+    assign id_csr_re  = inst_csrrd;
     assign id_csr_we  = inst_csrwr | inst_csrxchg;
     assign id_csr_num = id_inst[23:10];
     assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;
     assign id_csr_wvalue = inst_csrxchg ? rkd_value : rj_value;
-
+    assign id_syscall_ex = inst_syscall & id_valid;
     //修改：增加除法器传递信号
     assign id_ex_bus = {
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue
+        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue,id_syscall_ex
     };
 
     assign id_if_bus = {

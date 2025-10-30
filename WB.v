@@ -1,10 +1,12 @@
+`include "defines.vh"
+
 module WB (
     input           clk,
     input           resetn,
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [181:0] mem_wb_bus,
+    input   [182:0] mem_wb_bus,
 
     output  [ 37:0] wb_id_bus,
 
@@ -39,6 +41,7 @@ module WB (
     wire    [  4:0] rf_waddr;
     wire    [ 31:0] rf_wdata;
     wire    [  4:0] wb_dest;
+    wire    [ 31:0] wb_wdata; 
     //csr exp12
     wire            wb_csr_we;
     wire            wb_csr_re;
@@ -63,7 +66,7 @@ module WB (
     end
     assign  {
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
-        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue
+        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue,wb_syscall_ex
     } = mem_wb_bus_vld;
     assign  rf_we = wb_valid & wb_gr_we;
     assign  rf_waddr = wb_dest; 
@@ -71,6 +74,10 @@ module WB (
     assign  wb_id_bus = {
         rf_we, rf_waddr, rf_wdata
     };
+    assign wb_ex = wb_valid & (wb_syscall_ex);//可以加别的异常
+    assign wb_ecode = wb_syscall_ex ? `ECODE_SYS : 6'b0;
+    assign wb_esubcode = 9'b0;  // syscall没有子编码
+    assign wb_csr_pc = wb_pc;
     //csr
     assign wb_wdata = csr_re ? csr_rvalue : final_result;
     assign csr_num = wb_csr_num;

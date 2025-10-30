@@ -4,11 +4,11 @@ module MEM (
 
     output          mem_allowin,
     input           ex_mem_valid,
-    input   [187:0] ex_mem_bus,
+    input   [188:0] ex_mem_bus,
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [181:0] mem_wb_bus,
+    output  [182:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
 
@@ -20,7 +20,7 @@ module MEM (
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
-    reg     [187:0] ex_mem_bus_vld;
+    reg     [188:0] ex_mem_bus_vld;
     wire            mem_gr_we;
     wire            res_from_mem;
     wire    [  4:0] mem_dest;
@@ -42,6 +42,7 @@ module MEM (
     wire    [31:0]  mem_csr_wvalue;
     wire            mem_ertn;
     wire            ertn_flush;
+    wire            mem_syscall_ex;
     
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
 
@@ -85,12 +86,12 @@ module MEM (
     end
     assign {
         mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn
+        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex
     } = ex_mem_bus_vld;
     assign  final_result = res_from_mem ? extended_data : alu_result;
     assign  mem_wb_bus = {
         mem_gr_we, mem_pc, mem_inst, final_result, mem_dest,
-        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn
+        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
     
