@@ -47,6 +47,7 @@ module mycpu_top(
     wire            wb_ex;
     wire    [31:0]  wb_csr_pc; 
     wire            ertn_flush;
+    wire    [31:0]  ertn_entry;
     wire    [5:0]   wb_ecode;
     wire    [8:0]   wb_esubcode;
     wire    [31:0]  wb_vaddr;
@@ -66,7 +67,9 @@ module mycpu_top(
         .inst_sram_we       (inst_sram_we),
         .inst_sram_addr     (inst_sram_addr),
         .inst_sram_rdata    (inst_sram_rdata),
-        .inst_sram_wdata    (inst_sram_wdata)
+        .inst_sram_wdata    (inst_sram_wdata),
+        .ertn_flush         (ertn_flush),
+        .ertn_entry         (ertn_entry)
     );
     ID my_ID (
         .clk                (clk),
@@ -80,7 +83,8 @@ module mycpu_top(
         .id_ex_bus          (id_ex_bus),
         .wb_id_bus          (wb_id_bus),
         .mem_id_bus         (mem_id_bus),
-        .ex_id_bus          (ex_id_bus)
+        .ex_id_bus          (ex_id_bus),
+        .ertn_flush         (ertn_flush)
     );
     EX  my_EX (
         .clk                (clk),
@@ -95,7 +99,9 @@ module mycpu_top(
         .data_sram_we       (data_sram_we),
         .data_sram_addr     (data_sram_addr),
         .data_sram_wdata    (data_sram_wdata),
-        .ex_id_bus          (ex_id_bus)
+        .ex_id_bus          (ex_id_bus),
+        //ertn
+        .ertn_flush         (ertn_flush)
     );
     MEM my_MEM (
         .clk                (clk),
@@ -107,7 +113,9 @@ module mycpu_top(
         .wb_allowin         (wb_allowin),
         .mem_wb_bus         (mem_wb_bus),
         .data_sram_rdata    (data_sram_rdata),
-        .mem_id_bus         (mem_id_bus)
+        .mem_id_bus         (mem_id_bus),
+        //ertn
+        .ertn_flush         (ertn_flush)
     );
     WB my_WB (
         .clk                (clk),
@@ -127,33 +135,33 @@ module mycpu_top(
         .csr_we             (csr_we),
         .csr_wvalue         (csr_wvalue),
         .csr_wmask          (csr_wmask),
-        .ertn_flush         (ertn_flush),
         .wb_ex              (wb_ex),
         .wb_csr_pc          (wb_csr_pc),
         .wb_ecode           (wb_ecode),
         .wb_esubcode        (wb_esubcode)
     );
     csr_reg csr(
-    .clk                (clk),
-    .reset              (reset),
-    .csr_re             (csr_re),
-    .csr_num            (csr_num),
-    .csr_rvalue         (csr_rvalue),
-    .csr_we             (csr_we),
-    .csr_wmask          (csr_wmask),
-    .csr_wvalue         (csr_wvalue),
+        .clk                (clk),
+        .reset              (reset),
+        .csr_re             (csr_re),
+        .csr_num            (csr_num),
+        .csr_rvalue         (csr_rvalue),
+        .csr_we             (csr_we),
+        .csr_wmask          (csr_wmask),
+        .csr_wvalue         (csr_wvalue),
 
-    .ex_entry           (ex_entry),
-    .ertn_flush         (ertn_flush),
+        .ex_entry           (ex_entry),
+        .ertn_flush         (ertn_flush),
+        .ertn_entry         (ertn_entry),
 
-    .wb_ex              (wb_ex),
-    .wb_csr_pc          (wb_csr_pc),
-    .wb_vaddr           (wb_vaddr),
-    .wb_ecode           (wb_ecode),
-    .wb_esubcode        (wb_esubcode),
-    
-    .hw_int_in          (hw_int_in),
-    .ipi_int_in         (ipi_int_in)
-    
-);
+        .wb_ex              (wb_ex),
+        .wb_csr_pc          (wb_csr_pc),
+        .wb_vaddr           (wb_vaddr),
+        .wb_ecode           (wb_ecode),
+        .wb_esubcode        (wb_esubcode),
+        
+        .hw_int_in          (hw_int_in),
+        .ipi_int_in         (ipi_int_in)
+        
+    );
 endmodule

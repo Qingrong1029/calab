@@ -15,7 +15,10 @@ module EX (
     output  [31:0]  data_sram_addr,
     output  [31:0]  data_sram_wdata,
 
-    output  [39:0]  ex_id_bus
+    output  [39:0]  ex_id_bus,
+    //ertn
+    input           ertn_flush
+
 );
 
     reg             ex_valid;
@@ -61,7 +64,8 @@ module EX (
     wire    [13:0]  ex_csr_num;
     wire    [31:0]  ex_csr_wmask;
     wire    [31:0]  ex_csr_wvalue;
-    
+    wire            ex_ertn;
+
     wire            inst_st_w;
     wire            inst_st_b;
     wire            inst_st_h;
@@ -69,7 +73,7 @@ module EX (
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn
     } = id_ex_bus_vld;
 
     wire    [31:0]  alu_result;
@@ -106,20 +110,22 @@ module EX (
                                     rkd_value[31:0];
     
     assign  data_sram_en = 1'b1;
-    assign  data_sram_we = inst_st_b ? (
-                                       mem_addr_low2 == 2'b00 ? 4'b0001 :
-                                       mem_addr_low2 == 2'b01 ? 4'b0010 :
-                                       mem_addr_low2 == 2'b10 ? 4'b0100 :
-                                                                4'b1000): 
-                           inst_st_h ? (
-                                       mem_addr_low2 == 2'b00 ? 4'b0011 :
-                                                                4'b1100): // alu_result[1:0] == 2'b10
-                           inst_st_w ? 4'b1111 : 4'b0000;  // st.w 指令;
+    assign  data_sram_we = (~ertn_flush) ? (
+                    inst_st_b ? (
+                        mem_addr_low2 == 2'b00 ? 4'b0001 :
+                        mem_addr_low2 == 2'b01 ? 4'b0010 :
+                        mem_addr_low2 == 2'b10 ? 4'b0100 :
+                                                 4'b1000
+                    ) : inst_st_h ? (
+                        mem_addr_low2 == 2'b00 ? 4'b0011 :
+                                                 4'b1100
+                    ) : inst_st_w ? 4'b1111 : 4'b0000
+                ) : 4'b0000;  // ERTN flush 时禁止写
     assign  data_sram_addr = {alu_result[31:2],2'b00};
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue
+        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn
     };
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;

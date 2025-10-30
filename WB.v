@@ -72,7 +72,7 @@ module WB (
         rf_we, rf_waddr, rf_wdata
     };
     //csr
-    assign wb_wdata = wb_csr_re ? csr_rvalue : final_result;
+    assign wb_wdata = csr_re ? csr_rvalue : final_result;
     assign csr_num = wb_csr_num;
     assign csr_re = wb_csr_re | wb_csr_we ;
     assign csr_we = wb_csr_we;

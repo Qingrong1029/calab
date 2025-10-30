@@ -396,7 +396,7 @@ module ID (
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
-    assign id_csr_re  = inst_csrrd;
+    assign id_csr_re  = inst_csrrd | inst_csrwr | inst_csrxchg; //这俩条指令是不是需要读csr返回旧值（？
     assign id_csr_we  = inst_csrwr | inst_csrxchg;
     assign id_csr_num = id_inst[23:10];
     assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;

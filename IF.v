@@ -13,6 +13,9 @@ module IF (
     output  [31:0]  inst_sram_addr,
     output  [31:0]  inst_sram_wdata,
     input   [31:0]  inst_sram_rdata
+
+    input           ertn_flush,
+    input   [31:0]  ertn_entry
 );
     reg             if_valid;
     wire            if_ready_go;
@@ -25,34 +28,43 @@ module IF (
     wire    [31:0]  seq_pc;
 
     assign  if_ready_go = 1'b1;
-    assign  if_allowin = ~resetn | if_ready_go & id_allowin;
+    assign  if_allowin = ~resetn | if_ready_go & id_allowin ;
     always @(posedge clk ) begin
         if(~resetn )begin
+            if_valid <= 1'b0;
+        end
+        else if(ertn_flush)begin
             if_valid <= 1'b0;
         end
         else if(if_allowin)begin
             if_valid <= 1'b1;
         end
-        else if( if_br_taken )begin
+        else if( if_br_taken)begin
             if_valid <= 1'b0;
         end
     end
-    assign  if_id_valid = if_ready_go & if_valid;
+    assign  if_id_valid = if_ready_go & if_valid & ~ertn_flush; 
     assign  if_id_bus = { if_pc, if_inst };
 
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
-    assign  if_nextpc = if_br_taken ? br_target : seq_pc;
+    assign  if_nextpc = if_br_taken ? br_target :
+                        ertn_flush  ? ertn_entry :
+                                      seq_pc;
+
     always @(posedge clk ) begin
         if(~resetn)begin
             if_pc <= 32'h1bfffffc;
+        end
+        else if (ertn_flush) begin
+            if_pc <= ertn_entry;  
         end
         else if(if_allowin)begin
             if_pc <= if_nextpc;
         end
     end
     
-    assign  inst_sram_en = if_allowin;
+    assign  inst_sram_en = if_allowin | ertn_flush;
     assign  inst_sram_addr = if_nextpc;
     assign  if_inst = inst_sram_rdata;
     assign  inst_sram_we = 4'b0;
