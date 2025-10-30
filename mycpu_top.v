@@ -142,7 +142,7 @@ module mycpu_top(
     );
     csr_reg csr(
         .clk                (clk),
-        .reset              (reset),
+        .resetn             (resetn),
         .csr_re             (csr_re),
         .csr_num            (csr_num),
         .csr_rvalue         (csr_rvalue),
