@@ -6,7 +6,7 @@ module WB (
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [182:0] mem_wb_bus,
+    input   [183:0] mem_wb_bus,
 
     output  [ 37:0] wb_id_bus,
 
@@ -31,7 +31,7 @@ module WB (
 );
 
     reg             wb_valid;
-    reg     [181:0] mem_wb_bus_vld;
+    reg     [183:0] mem_wb_bus_vld;
     wire            wb_ready_go;
     wire            wb_gr_we;
     wire            rf_we;

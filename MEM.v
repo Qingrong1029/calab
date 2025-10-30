@@ -4,11 +4,11 @@ module MEM (
 
     output          mem_allowin,
     input           ex_mem_valid,
-    input   [188:0] ex_mem_bus,
+    input   [189:0] ex_mem_bus,
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [182:0] mem_wb_bus,
+    output  [183:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
 
@@ -20,7 +20,7 @@ module MEM (
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
-    reg     [188:0] ex_mem_bus_vld;
+    reg     [189:0] ex_mem_bus_vld;
     wire            mem_gr_we;
     wire            res_from_mem;
     wire    [  4:0] mem_dest;

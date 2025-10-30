@@ -12,7 +12,7 @@ module IF (
     output  [3:0]   inst_sram_we,
     output  [31:0]  inst_sram_addr,
     output  [31:0]  inst_sram_wdata,
-    input   [31:0]  inst_sram_rdata
+    input   [31:0]  inst_sram_rdata,
 
     input           ertn_flush,
     input   [31:0]  ertn_entry

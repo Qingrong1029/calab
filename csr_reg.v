@@ -20,6 +20,7 @@ module csr_reg (
     input  wire [31:0] wb_vaddr,
     input  wire [5:0]  wb_ecode,
     input  wire [8:0]  wb_esubcode,
+    input  wire [31:0] ertn_entry,
     output wire [31:0] ex_entry,
     
     input  wire [7:0]  hw_int_in,
@@ -171,5 +172,6 @@ module csr_reg (
                         (csr_num==`CSR_SAVE3)  ? csr_save3 : 32'b0;
 
     assign ex_entry = csr_eentry_va;
+    assign ertn_entry = csr_era_pc;
 
 endmodule
