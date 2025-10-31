@@ -8,6 +8,7 @@ module EX (
 
     output          ex_mem_valid,
     input           mem_allowin,
+    input           wb_ex,
     output  [189:0] ex_mem_bus,
 
     output          data_sram_en,
@@ -22,6 +23,7 @@ module EX (
 );
 
     reg             ex_valid;
+    wire            wb_ex;
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
@@ -38,6 +40,9 @@ module EX (
     always @(posedge clk ) begin
         if (~resetn) begin
             ex_valid <= 1'b0;
+        end
+        else if(wb_ex) begin
+      ex_valid <= 1'b0;
         end
         else if(ex_allowin) begin
             ex_valid <= id_ex_valid;
@@ -111,7 +116,7 @@ module EX (
                                     rkd_value[31:0];
     
     assign  data_sram_en = 1'b1;
-    assign  data_sram_we = (~ertn_flush) ? (
+    assign  data_sram_we = (~wb_ex & ~ertn_flush) ? (
                     inst_st_b ? (
                         mem_addr_low2 == 2'b00 ? 4'b0001 :
                         mem_addr_low2 == 2'b01 ? 4'b0010 :

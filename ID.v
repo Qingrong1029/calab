@@ -11,6 +11,7 @@ module ID (
     output          id_ex_valid,
     output  [273:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
+    input           wb_ex,
 
     input   [ 37:0] mem_id_bus,
     input   [ 39:0] ex_id_bus,
@@ -23,6 +24,7 @@ module ID (
     wire            br_taken;
     wire    [31:0]  br_target;
     reg     [63:0]  if_id_bus_vld;
+    wire            wb_ex;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
     
@@ -54,7 +56,7 @@ module ID (
     assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush;;
     assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;;
     always @(posedge clk ) begin
-        if(~resetn ) begin
+        if(~resetn||wb_ex ) begin
             id_valid <= 1'b0;
         end
         else if (ertn_flush) begin
@@ -200,7 +202,7 @@ module ID (
     assign op_25_22  = id_inst[25:22];
     assign op_21_20  = id_inst[21:20];
     assign op_19_15  = id_inst[19:15];
-    assign op_25_34  = id_inst[25:24];
+    assign op_25_24  = id_inst[25:24];
     assign op_9_5    = id_inst[9:5];
 
     assign rd   = id_inst[ 4: 0];
