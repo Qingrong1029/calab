@@ -11,12 +11,14 @@ module MEM (
     output  [184:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
+    input           wb_ex,
 
     output  [ 39:0] mem_id_bus,
     output          ertn_flush 
 );
 
     reg             mem_valid;
+    wire            wb_ex;
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
@@ -75,6 +77,9 @@ module MEM (
     always @(posedge clk ) begin
         if (~resetn) begin
             mem_valid <= 1'b0;
+        end
+        if (wb_ex) begin
+        mem_valid <= 1'b0;
         end
         else if(mem_allowin) begin
             mem_valid <= ex_mem_valid;
