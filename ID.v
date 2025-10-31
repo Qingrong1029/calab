@@ -13,8 +13,8 @@ module ID (
     input   [ 37:0] wb_id_bus,
     input           wb_ex,
 
-    input   [ 39:0] mem_id_bus,
-    input   [ 41:0] ex_id_bus,
+    input   [ 53:0] mem_id_bus,
+    input   [ 55:0] ex_id_bus,
     input           ertn_flush
 );
     reg             id_valid;
@@ -42,6 +42,8 @@ module ID (
     wire            mem_gr_we;
     wire            mem_csr;
     wire            ex_csr;
+    wire    [13:0]  ex_csr_num;
+    wire    [13:0]  mem_csr_num;
     
     assign mem_type = inst_ld_w  ? 3'b000 :  // word
                   inst_st_w  ? 3'b000 :  // word
@@ -53,8 +55,8 @@ module ID (
                   inst_ld_bu ? 3'b110 :  // byte unsigned
                   3'b000;
     
-    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr} =  ex_id_bus;
-    assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr } = mem_id_bus;
+    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr, ex_csr_num} =  ex_id_bus;
+    assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
     
     assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush;;
     assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;;
@@ -329,7 +331,7 @@ module ID (
 
     assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu;
+    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_csrrd | inst_csrwr | inst_csrxchg;
 
     assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -410,7 +412,7 @@ module ID (
     assign id_csr_we  = inst_csrwr | inst_csrxchg;
     assign id_csr_num = id_inst[23:10];
     assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;
-    assign id_csr_wvalue = inst_csrxchg ? rkd_value : rj_value;
+    assign id_csr_wvalue = rkd_value;
     assign id_syscall_ex = inst_syscall & id_valid;
     //修改：增加除法器传递信号
     assign id_ex_bus = {
@@ -424,17 +426,20 @@ module ID (
     };
     
     //csr_block
-    wire csr_crush;
-    assign csr_crush = (ex_csr && ((ex_gr_we & (ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                            || (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))) 
-                    || (mem_csr && (mem_gr_we &((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                            || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))); 
+    wire csr_block;
+    assign csr_block = (id_csr_re|id_csr_we)&
+                      ((ex_csr  & ex_gr_we  & (ex_csr_num == id_csr_num))
+                    || (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num))
+                    || (ex_csr  & (ex_gr_we & ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
+                                            || (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
+                    || (mem_csr & (mem_gr_we &((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
+                                             || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
     
     assign id_ready_go =  ertn_flush ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy | csr_crush);  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy | csr_block);  // 只要 EX 报 busy，就阻塞 ID 发射
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |

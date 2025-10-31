@@ -16,7 +16,7 @@ module EX (
     output  [31:0]  data_sram_addr,
     output  [31:0]  data_sram_wdata,
 
-    output  [41:0]  ex_id_bus,
+    output  [55:0]  ex_id_bus,
     //ertn
     input           ertn_flush
 
@@ -138,5 +138,5 @@ module EX (
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
-    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr};
+    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr , ex_csr_num};
 endmodule

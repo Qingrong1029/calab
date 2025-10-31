@@ -33,8 +33,8 @@ module mycpu_top(
     wire            mem_wb_valid;
     wire    [183:0] mem_wb_bus;
     wire            wb_allowin;
-    wire    [ 39:0] mem_id_bus;
-    wire    [ 41:0] ex_id_bus;
+    wire    [ 53:0] mem_id_bus;
+    wire    [ 55:0] ex_id_bus;
     
     wire    [13:0]  csr_num;
     wire            csr_re;

@@ -13,7 +13,7 @@ module MEM (
     input   [ 31:0] data_sram_rdata,
     input           wb_ex,
 
-    output  [ 39:0] mem_id_bus,
+    output  [ 53:0] mem_id_bus,
     output          ertn_flush 
 );
 
@@ -102,5 +102,5 @@ module MEM (
     assign  mem_bypass = mem_valid & mem_gr_we;
     assign  mem_csr = mem_csr_re | mem_csr_we;
     
-    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr};
+    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr , mem_csr_num};
 endmodule
