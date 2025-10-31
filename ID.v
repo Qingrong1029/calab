@@ -394,8 +394,7 @@ module ID (
                    || inst_jirl
                    || inst_bl
                    || inst_b
-                  ) & id_valid & ~ertn_flush;
-;
+                  ) & id_valid;
 
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);

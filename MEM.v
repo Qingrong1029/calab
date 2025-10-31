@@ -8,7 +8,7 @@ module MEM (
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [183:0] mem_wb_bus,
+    output  [184:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
 

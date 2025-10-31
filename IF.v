@@ -56,9 +56,6 @@ module IF (
         if(~resetn)begin
             if_pc <= 32'h1bfffffc;
         end
-        else if (ertn_flush) begin
-            if_pc <= ertn_entry;  
-        end
         else if(if_allowin)begin
             if_pc <= if_nextpc;
         end

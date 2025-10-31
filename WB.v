@@ -6,7 +6,7 @@ module WB (
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [183:0] mem_wb_bus,
+    input   [184:0] mem_wb_bus,
 
     output  [ 37:0] wb_id_bus,
 
@@ -25,7 +25,7 @@ module WB (
     output  [31:0]  csr_wmask,
     output          ertn_flush,
     output          wb_ex,
-    output [31:0]   wb_csr_pc,
+    output  [31:0]  wb_csr_pc,
     output  [ 5:0]  wb_ecode,
     output  [ 8:0]  wb_esubcode
 );
@@ -48,6 +48,7 @@ module WB (
     wire    [13:0]  wb_csr_num;
     wire    [31:0]  wb_csr_wmask;
     wire    [31:0]  wb_csr_wvalue;
+    wire            wb_ertn;
     
     assign wb_ready_go = 1'b1;
     assign wb_allowin = wb_ready_go | ~wb_valid;
@@ -66,7 +67,7 @@ module WB (
     end
     assign  {
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
-        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue,wb_syscall_ex
+        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex
     } = mem_wb_bus_vld;
     assign  rf_we = wb_valid & wb_gr_we;
     assign  rf_waddr = wb_dest; 
