@@ -33,7 +33,7 @@ module mycpu_top(
     wire            mem_wb_valid;
     wire    [183:0] mem_wb_bus;
     wire            wb_allowin;
-    wire    [ 37:0] mem_id_bus;
+    wire    [ 39:0] mem_id_bus;
     wire    [ 40:0] ex_id_bus;
     
     wire    [13:0]  csr_num;
@@ -69,8 +69,7 @@ module mycpu_top(
         .inst_sram_rdata    (inst_sram_rdata),
         .inst_sram_wdata    (inst_sram_wdata),
         .ertn_flush         (ertn_flush),
-        .ertn_entry         (ertn_entry),
-        .wb_ex              (wb_ex)
+        .ertn_entry         (ertn_entry)
     );
     ID my_ID (
         .clk                (clk),
@@ -85,8 +84,7 @@ module mycpu_top(
         .wb_id_bus          (wb_id_bus),
         .mem_id_bus         (mem_id_bus),
         .ex_id_bus          (ex_id_bus),
-        .ertn_flush         (ertn_flush),
-        .wb_ex              (wb_ex | ertn_flush)
+        .ertn_flush         (ertn_flush)
     );
     EX  my_EX (
         .clk                (clk),
@@ -103,8 +101,7 @@ module mycpu_top(
         .data_sram_wdata    (data_sram_wdata),
         .ex_id_bus          (ex_id_bus),
         //ertn
-        .ertn_flush         (ertn_flush),
-        .wb_ex            (wb_ex | ertn_flush)
+        .ertn_flush         (ertn_flush)
     );
     MEM my_MEM (
         .clk                (clk),
@@ -118,8 +115,7 @@ module mycpu_top(
         .data_sram_rdata    (data_sram_rdata),
         .mem_id_bus         (mem_id_bus),
         //ertn
-        .ertn_flush         (ertn_flush),
-        .wb_ex            (wb_ex | ertn_flush)
+        .ertn_flush         (ertn_flush)
     );
     WB my_WB (
         .clk                (clk),

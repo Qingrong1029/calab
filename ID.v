@@ -11,10 +11,9 @@ module ID (
     output          id_ex_valid,
     output  [273:0] id_ex_bus,
     input   [ 37:0] wb_id_bus,
-    input           wb_ex,
 
-    input   [ 37:0] mem_id_bus,
-    input   [ 39:0] ex_id_bus,
+    input   [ 39:0] mem_id_bus,
+    input   [ 40:0] ex_id_bus,
     input           ertn_flush
 );
     reg             id_valid;
@@ -24,7 +23,6 @@ module ID (
     wire            br_taken;
     wire    [31:0]  br_target;
     reg     [63:0]  if_id_bus_vld;
-    wire            wb_ex;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
     
@@ -39,6 +37,9 @@ module ID (
     wire    [ 4:0]  ex_dest;
     wire    [ 4:0]  mem_dest;
     wire            ex_div_busy;
+    wire            mem_gr_we;
+    wire            mem_csr;
+    wire            ex_csr;
     
     assign mem_type = inst_ld_w  ? 3'b000 :  // word
                   inst_st_w  ? 3'b000 :  // word
@@ -50,13 +51,13 @@ module ID (
                   inst_ld_bu ? 3'b110 :  // byte unsigned
                   3'b000;
     
-    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy} =  ex_id_bus;
-    assign { mem_bypass , mem_dest , mem_wdata } = mem_id_bus;
+    assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr} =  ex_id_bus;
+    assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr } = mem_id_bus;
     
     assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush;;
     assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;;
     always @(posedge clk ) begin
-        if(~resetn||wb_ex ) begin
+        if(~resetn ) begin
             id_valid <= 1'b0;
         end
         else if (ertn_flush) begin
@@ -420,11 +421,18 @@ module ID (
         br_taken & id_ready_go , br_target
     };
     
+    //csr_block
+    wire csr_crush;
+    assign csr_crush = (ex_csr && ((ex_gr_we & (ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
+                            || (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))) 
+                    || (mem_csr && (mem_gr_we &((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
+                            || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))); 
+    
     assign id_ready_go =  ertn_flush ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy);  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy | csr_crush);  // 只要 EX 报 busy，就阻塞 ID 发射
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |
