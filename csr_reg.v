@@ -53,7 +53,7 @@ module csr_reg (
     reg [31:0] csr_era_pc;
 
     // EENTRY
-    reg [31:0] csr_eentry_va;
+    reg [25:0] csr_eentry_va;
 
     // SAVE 寄存器
     reg [31:0] csr_save0, csr_save1, csr_save2, csr_save3;
@@ -133,9 +133,10 @@ module csr_reg (
 
     // ---------- EENTRY.VA ----------
     always @(posedge clk) begin
-        if (csr_we && csr_num == `CSR_EENTRY)
-            csr_eentry_va <= (csr_wmask & csr_wvalue) | (~csr_wmask & csr_eentry_va);
-    end
+    if (csr_we && csr_num==`CSR_EENTRY)
+        csr_eentry_va <= csr_wmask[`CSR_EENTRY_VA]&csr_wvalue[`CSR_EENTRY_VA]
+                       | ~csr_wmask[`CSR_EENTRY_VA]&csr_eentry_va;
+ end
 
     // ---------- SAVE0~3 ----------
     always @(posedge clk) begin
@@ -171,7 +172,7 @@ module csr_reg (
                         (csr_num==`CSR_SAVE2)  ? csr_save2 :
                         (csr_num==`CSR_SAVE3)  ? csr_save3 : 32'b0;
 
-    assign ex_entry = csr_eentry_va;
+    assign ex_entry = {csr_eentry_va, 6'b0};
     assign ertn_entry = csr_era_pc;
 
 endmodule

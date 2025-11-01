@@ -72,3 +72,14 @@
 // 保留编码范围
 `define ECODE_RESERVED_LOW  5'h1A  // 保留编码起始
 `define ECODE_RESERVED_HIGH 5'h3E  // 保留编码结束
+
+    `define CSR_CRMD_PLV    1 :0
+    `define CSR_CRMD_IE     2
+    `define CSR_PRMD_PPLV   1 :0
+    `define CSR_PRMD_PIE    2
+    `define CSR_ECFG_LIE    12:0
+    `define CSR_ESTAT_IS10  1 :0
+    `define CSR_ERA_PC      31:0
+    `define CSR_EENTRY_VA   31:6
+    `define CSR_SAVE_DATA   31:0
+    `define CSR_TID_TID     31:0
