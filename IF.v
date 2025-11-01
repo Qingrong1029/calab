@@ -16,6 +16,7 @@ module IF (
     input   [31:0]  inst_sram_rdata,
 
     input           ertn_flush,
+    input   [31:0]  ex_entry,
     input   [31:0]  ertn_entry
 );
     reg             if_valid;
@@ -27,6 +28,7 @@ module IF (
     wire    [31:0]  if_nextpc;
     wire    [31:0]  br_target;
     wire    [31:0]  seq_pc;
+    wire    [31:0]  ex_entry;
     wire            wb_ex;
 
     assign  if_ready_go = 1'b1;
@@ -50,7 +52,8 @@ module IF (
 
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
-    assign  if_nextpc = if_br_taken ? br_target :
+    assign  if_nextpc = wb_ex? ex_entry:
+                        if_br_taken ? br_target :
                         ertn_flush  ? ertn_entry :
                                       seq_pc;
 

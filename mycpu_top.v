@@ -70,7 +70,8 @@ module mycpu_top(
         .inst_sram_wdata    (inst_sram_wdata),
         .ertn_flush         (ertn_flush),
         .ertn_entry         (ertn_entry),
-        .wb_ex              (wb_ex)
+        .wb_ex              (wb_ex),
+        .ex_entry         (ex_entry  )
     );
     ID my_ID (
         .clk                (clk),
