@@ -28,11 +28,9 @@ module IF (
     wire    [31:0]  if_nextpc;
     wire    [31:0]  br_target;
     wire    [31:0]  seq_pc;
-    wire    [31:0]  ex_entry;
-    wire            wb_ex;
 
     assign  if_ready_go = 1'b1;
-    assign  if_allowin = ~resetn | if_ready_go & id_allowin||ertn_flush|wb_ex; ;
+    assign  if_allowin = ~resetn | if_ready_go & id_allowin |ertn_flush|wb_ex;
     always @(posedge clk ) begin
         if(~resetn )begin
             if_valid <= 1'b0;
@@ -50,9 +48,9 @@ module IF (
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
     assign  if_nextpc = wb_ex? ex_entry:
-                        if_br_taken ? br_target :
-                        ertn_flush  ? ertn_entry :
-                                      seq_pc;
+                 if_br_taken ? br_target :
+                 ertn_flush  ? ertn_entry :
+                               seq_pc;
 
     always @(posedge clk ) begin
         if(~resetn)begin

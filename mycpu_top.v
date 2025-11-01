@@ -26,7 +26,7 @@ module mycpu_top(
     wire            ex_allowin;
     wire            id_ex_valid;
     wire    [273:0] id_ex_bus;
-    wire    [ 37:0] wb_id_bus;
+    wire    [ 38:0] wb_id_bus;
     wire    [189:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
@@ -71,7 +71,7 @@ module mycpu_top(
         .ertn_flush         (ertn_flush),
         .ertn_entry         (ertn_entry),
         .wb_ex              (wb_ex),
-        .ex_entry         (ex_entry  )
+        .ex_entry           (ex_entry)
     );
     ID my_ID (
         .clk                (clk),

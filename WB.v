@@ -8,7 +8,7 @@ module WB (
     input           mem_wb_valid,
     input   [184:0] mem_wb_bus,
 
-    output  [ 37:0] wb_id_bus,
+    output  [ 38:0] wb_id_bus,
 
     output  [ 31:0] debug_wb_pc,
     output  [  3:0] debug_wb_rf_we,
@@ -73,7 +73,7 @@ module WB (
     assign  rf_waddr = wb_dest; 
     assign  rf_wdata = final_result;
     assign  wb_id_bus = {
-        rf_we, rf_waddr, rf_wdata
+        rf_we, rf_waddr, rf_wdata, csr_re
     };
     assign wb_ex = wb_valid & (wb_syscall_ex);//可以加别的异常
     assign wb_ecode = wb_syscall_ex ? `ECODE_SYS : 6'b0;

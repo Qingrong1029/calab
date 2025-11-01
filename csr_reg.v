@@ -133,10 +133,10 @@ module csr_reg (
 
     // ---------- EENTRY.VA ----------
     always @(posedge clk) begin
-    if (csr_we && csr_num==`CSR_EENTRY)
+        if (csr_we && csr_num==`CSR_EENTRY)
         csr_eentry_va <= csr_wmask[`CSR_EENTRY_VA]&csr_wvalue[`CSR_EENTRY_VA]
                        | ~csr_wmask[`CSR_EENTRY_VA]&csr_eentry_va;
- end
+    end
 
     // ---------- SAVE0~3 ----------
     always @(posedge clk) begin

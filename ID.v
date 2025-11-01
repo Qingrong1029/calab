@@ -10,7 +10,7 @@ module ID (
     input           ex_allowin,
     output          id_ex_valid,
     output  [273:0] id_ex_bus,
-    input   [ 37:0] wb_id_bus,
+    input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
     input   [ 53:0] mem_id_bus,
@@ -42,6 +42,7 @@ module ID (
     wire            mem_gr_we;
     wire            mem_csr;
     wire            ex_csr;
+    wire            wb_csr;
     wire    [13:0]  ex_csr_num;
     wire    [13:0]  mem_csr_num;
     
@@ -171,7 +172,7 @@ module ID (
     wire        inst_csrwr;
     wire        inst_csrxchg;
     wire        inst_ertn;
-    wire        syscall;
+    wire        inst_syscall;
 
     wire        need_ui5;
     wire        need_si12;
@@ -366,7 +367,7 @@ module ID (
     assign rf_raddr1 = rj;
     assign rf_raddr2 = src_reg_is_rd ? rd :rk;
     assign {
-           rf_we, rf_waddr, rf_wdata
+           rf_we, rf_waddr, rf_wdata, wb_csr
            } = wb_id_bus;
     regfile u_regfile(
         .clk    (clk      ),
@@ -427,13 +428,15 @@ module ID (
     
     //csr_block
     wire csr_block;
-    assign csr_block = (id_csr_re|id_csr_we)&
+    assign csr_block = ((id_csr_re|id_csr_we)&
                       ((ex_csr  & ex_gr_we  & (ex_csr_num == id_csr_num))
-                    || (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num))
+                    || (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)))
                     || (ex_csr  & (ex_gr_we & ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
                                             || (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
                     || (mem_csr & (mem_gr_we &((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                                             || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
+                                             || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
+                    || (wb_csr & (rf_we &((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
+                                       || (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
     
     assign id_ready_go =  ertn_flush ? 1'b1 :
                         ~( (ex_ld & 
@@ -450,6 +453,6 @@ module ID (
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
                           inst_xor | inst_st_w | inst_st_b | inst_st_h |
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
-                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu|inst_csrrd|inst_csrwr|inst_csrxchg;
+                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrrd | inst_csrwr | inst_csrxchg;
 
 endmodule
