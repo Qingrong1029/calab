@@ -439,8 +439,8 @@ module ID (
                                        || (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
 
     assign block_not = rf_we & (rf_waddr != 0) & 
-                      (( need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1)) |
-                       (need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2)));
+                      ((ex_dest == rf_raddr1) &( need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1)) |
+                      (ex_dest == rf_raddr2) & (need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2)));
     
         reg block_not_prev;  // 记录上一拍的block_not状态
     

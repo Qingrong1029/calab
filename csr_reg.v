@@ -133,10 +133,10 @@ module csr_reg (
 
     // ---------- EENTRY.VA ----------
     always @(posedge clk) begin
-        if (csr_we && csr_num==`CSR_EENTRY)
+    if (csr_we && csr_num==`CSR_EENTRY)
         csr_eentry_va <= csr_wmask[`CSR_EENTRY_VA]&csr_wvalue[`CSR_EENTRY_VA]
                        | ~csr_wmask[`CSR_EENTRY_VA]&csr_eentry_va;
-    end
+ end
 
     // ---------- SAVE0~3 ----------
     always @(posedge clk) begin
@@ -157,7 +157,7 @@ module csr_reg (
                                     csr_crmd_da, csr_crmd_ie, csr_crmd_plv};
     wire [31:0] csr_prmd_rvalue  = {29'b0, csr_prmd_pie, csr_prmd_pplv};
     wire [31:0] csr_ecfg_rvalue  = {19'b0, csr_ecfg_lie};
-    wire [31:0] csr_estat_rvalue = {csr_estat_ecode, csr_estat_esubcode, 4'b0, csr_estat_is};
+    wire [31:0] csr_estat_rvalue = {csr_estat_esubcode, csr_estat_ecode, 4'b0, csr_estat_is};
     wire [31:0] csr_era_rvalue   = csr_era_pc;
     wire [31:0] csr_eentry_rvalue= csr_eentry_va;
 
