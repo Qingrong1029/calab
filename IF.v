@@ -32,12 +32,9 @@ module IF (
     wire            wb_ex;
 
     assign  if_ready_go = 1'b1;
-    assign  if_allowin = ~resetn | if_ready_go & id_allowin ;
+    assign  if_allowin = ~resetn | if_ready_go & id_allowin||ertn_flush|wb_ex; ;
     always @(posedge clk ) begin
         if(~resetn )begin
-            if_valid <= 1'b0;
-        end
-        else if(ertn_flush||wb_ex)begin
             if_valid <= 1'b0;
         end
         else if(if_allowin)begin
