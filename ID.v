@@ -437,12 +437,25 @@ module ID (
                                              || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
                     || (wb_csr & (rf_we &((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
                                        || (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
+
+    assign block_not = rf_we & (rf_waddr != 0) & 
+                      (( need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1)) |
+                       (need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2)));
     
+        reg block_not_prev;  // 记录上一拍的block_not状态
+    
+    always @(posedge clk) begin
+        if (~resetn) begin
+            block_not_prev <= 1'b0;
+        end else begin
+            block_not_prev <= block_not;
+        end
+    end
     assign id_ready_go =  ertn_flush ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy | csr_block);  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy | csr_block)|block_not_prev;  // 只要 EX 报 busy，就阻塞 ID 发射
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |

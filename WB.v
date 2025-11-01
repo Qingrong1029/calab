@@ -71,7 +71,7 @@ module WB (
     } = mem_wb_bus_vld;
     assign  rf_we = wb_valid & wb_gr_we;
     assign  rf_waddr = wb_dest; 
-    assign  rf_wdata = final_result;
+    assign  rf_wdata = wb_wdata;
     assign  wb_id_bus = {
         rf_we, rf_waddr, rf_wdata, csr_re
     };
