@@ -111,7 +111,8 @@ module csr_reg (
             csr_estat_is[1:0] <= (csr_wmask[1:0] & csr_wvalue[1:0]) | (~csr_wmask[1:0] & csr_estat_is[1:0]);
 
         csr_estat_is[9:2] <= hw_int_in[7:0];  // 硬件中断输入
-        csr_estat_is[10]  <= 1'b0;           // 保留
+        csr_estat_is[10]  <= 1'b0; 
+        csr_estat_is[11] <= 1'b0;              // 保留
         csr_estat_is[12]  <= ipi_int_in;     // 核间中断输入
     end
 

@@ -462,7 +462,7 @@ module ID (
                           inst_st_w | inst_st_b | inst_st_h | inst_bne  | inst_beq | inst_jirl |inst_blt | inst_bge | inst_bltu | inst_bgeu|
                           inst_slti | inst_sltui | inst_andi | inst_ori | inst_xori | 
                           inst_sll_w | inst_srl_w |inst_sra_w | inst_pcaddu12i| inst_mul_w | inst_mulh_w | inst_mulh_wu|
-                          inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
+                          inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu| inst_csrxchg;
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
                           inst_xor | inst_st_w | inst_st_b | inst_st_h |
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
