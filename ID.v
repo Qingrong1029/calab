@@ -59,8 +59,8 @@ module ID (
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr, ex_csr_num} =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
     
-    assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush;;
-    assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;;
+    assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush & ~wb_ex;
+    assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;
     always @(posedge clk ) begin
         if(~resetn||wb_ex ) begin
             id_valid <= 1'b0;
