@@ -80,10 +80,10 @@ module MEM (
         if (~resetn) begin
             mem_valid <= 1'b0;
         end
-        if (wb_ex) begin
+        else if (wb_ex) begin
             mem_valid <= 1'b0;
         end
-        if (ertn_flush) begin
+        else if (ertn_flush) begin
             mem_valid <= 1'b0;
         end
         else if(mem_allowin) begin
