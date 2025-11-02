@@ -104,18 +104,21 @@ module csr_reg (
     end
 
     // ---------- ESTAT.IS ----------
+
     always @(posedge clk) begin
-        if (~resetn)
+        if (~resetn) begin
             csr_estat_is[1:0] <= 2'b0;
-        else if (csr_we && csr_num == `CSR_ESTAT)
-            csr_estat_is[1:0] <= (csr_wmask[1:0] & csr_wvalue[1:0]) | (~csr_wmask[1:0] & csr_estat_is[1:0]);
+        end
+        else if (csr_we && csr_num==`CSR_ESTAT) begin
+            csr_estat_is[1:0] <= csr_wmask[`CSR_ESTAT_IS10] & csr_wvalue[`CSR_ESTAT_IS10] | ~csr_wmask[`CSR_ESTAT_IS10] & csr_estat_is[1:0];
+        end   
 
-        csr_estat_is[9:2] <= hw_int_in[7:0];  // 硬件中断输入
-        csr_estat_is[10]  <= 1'b0; 
-        csr_estat_is[11] <= 1'b0;              // 保留
-        csr_estat_is[12]  <= ipi_int_in;     // 核间中断输入
+        csr_estat_is[9:2] <= hw_int_in[7:0];
+        csr_estat_is[10]  <= 1'b0;
+        csr_estat_is[11] <= 1'b0;              
+        csr_estat_is[12] <= ipi_int_in;   
     end
-
+    
     // ---------- ESTAT.ECODE & ESUBCODE ----------
     always @(posedge clk) begin
         if (wb_ex) begin

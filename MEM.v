@@ -72,7 +72,7 @@ module MEM (
     
     assign  ertn_flush = mem_valid & mem_ertn;
     assign  mem_ready_go = 1'b1;
-    assign  mem_wb_valid = mem_ready_go & mem_valid;
+    assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
         if (~resetn) begin

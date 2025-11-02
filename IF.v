@@ -30,7 +30,7 @@ module IF (
     wire    [31:0]  seq_pc;
 
     assign  if_ready_go = 1'b1;
-    assign  if_allowin = ~resetn | if_ready_go & id_allowin |ertn_flush|wb_ex;
+    assign  if_allowin = ~resetn | if_ready_go & id_allowin |ertn_flush |wb_ex;
     always @(posedge clk ) begin
         if(~resetn )begin
             if_valid <= 1'b0;
@@ -42,7 +42,7 @@ module IF (
             if_valid <= 1'b0;
         end
     end
-    assign  if_id_valid = if_ready_go & if_valid & ~ertn_flush; 
+    assign  if_id_valid = if_ready_go & if_valid & ~ertn_flush & ~wb_ex; 
     assign  if_id_bus = { if_pc, if_inst };
 
     assign  seq_pc = if_pc + 3'h4;
