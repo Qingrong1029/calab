@@ -177,6 +177,6 @@ module csr_reg (
                         (csr_num==`CSR_SAVE3)  ? csr_save3 : 32'b0;
 
     assign ex_entry = {csr_eentry_va, 6'b0};
-    assign ertn_entry = csr_era_pc + 32'h4;
+    assign ertn_entry = csr_era_pc;
 
 endmodule

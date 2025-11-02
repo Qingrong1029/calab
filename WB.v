@@ -79,10 +79,11 @@ module WB (
     assign wb_ecode = wb_syscall_ex ? `ECODE_SYS : 6'b0;
     assign wb_esubcode = 9'b0;  // syscall没有子编码
     assign wb_csr_pc = wb_pc;
+    assign ertn_flush = wb_valid & wb_ertn;
     //csr
     assign wb_wdata = csr_re ? csr_rvalue : final_result;
     assign csr_num = wb_csr_num;
-    assign csr_re = wb_csr_re | wb_csr_we ;
+    assign csr_re = wb_csr_re | wb_csr_we;
     assign csr_we = wb_csr_we;
     assign csr_wvalue = wb_csr_wvalue;
     assign csr_wmask = wb_csr_wmask;

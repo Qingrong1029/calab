@@ -143,6 +143,7 @@ module mycpu_top(
         .csr_we             (csr_we),
         .csr_wvalue         (csr_wvalue),
         .csr_wmask          (csr_wmask),
+        .ertn_flush         (ertn_flush),
         .wb_ex              (wb_ex),
         .wb_csr_pc          (wb_csr_pc),
         .wb_ecode           (wb_ecode),

@@ -12,10 +12,11 @@ module MEM (
 
     input   [ 31:0] data_sram_rdata,
     input           wb_ex,
+  
 
     output  [ 53:0] mem_id_bus,
     output          mem_ex,
-    output          ertn_flush 
+    input           ertn_flush
 );
 
     reg             mem_valid;
@@ -71,18 +72,19 @@ module MEM (
                        (mem_type == 3'b101) ? zero_extended_half :  // ld.hu: 半字零扩展
                        zero_extended_byte;  // ld.bu: 字节零扩展
 
-    
-    assign  ertn_flush = mem_valid & mem_ertn;
-    assign  mem_ex = mem_valid & mem_syscall_ex;
+    assign  mem_ex = mem_valid & (mem_syscall_ex | mem_ertn);
     assign  mem_ready_go = 1'b1;
-    assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex;
+    assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex & ~ertn_flush;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
         if (~resetn) begin
             mem_valid <= 1'b0;
         end
         if (wb_ex) begin
-        mem_valid <= 1'b0;
+            mem_valid <= 1'b0;
+        end
+        if (ertn_flush) begin
+            mem_valid <= 1'b0;
         end
         else if(mem_allowin) begin
             mem_valid <= ex_mem_valid;
