@@ -55,6 +55,7 @@ module mycpu_top(
     wire            has_int;
     wire    [7:0]   hw_int_in  = 8'b0;
     wire            ipi_int_in = 1'b0;
+    wire            mem_ex;
     
     IF my_IF (
         .clk                (clk),
@@ -105,6 +106,7 @@ module mycpu_top(
         .ex_id_bus          (ex_id_bus),
         //ertn
         .ertn_flush         (ertn_flush),
+        .mem_ex             (mem_ex),
         .wb_ex              (wb_ex | ertn_flush)
     );
     MEM my_MEM (
@@ -120,7 +122,8 @@ module mycpu_top(
         .mem_id_bus         (mem_id_bus),
         //ertn
         .ertn_flush        (ertn_flush),
-        .wb_ex              (wb_ex | ertn_flush)
+        .mem_ex            (mem_ex),
+        .wb_ex             (wb_ex | ertn_flush)
     );
     WB my_WB (
         .clk                (clk),

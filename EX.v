@@ -18,6 +18,7 @@ module EX (
 
     output  [55:0]  ex_id_bus,
     //ertn
+    input           mem_ex,
     input           ertn_flush
 
 );
@@ -117,7 +118,7 @@ module EX (
                                     rkd_value[31:0];
     
     assign  data_sram_en = 1'b1;
-    assign  data_sram_we = (~wb_ex & ~ertn_flush) ? (
+    assign  data_sram_we = (~wb_ex & ~ertn_flush & ~mem_ex) ? (
                     inst_st_b ? (
                         mem_addr_low2 == 2'b00 ? 4'b0001 :
                         mem_addr_low2 == 2'b01 ? 4'b0010 :

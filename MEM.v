@@ -14,6 +14,7 @@ module MEM (
     input           wb_ex,
 
     output  [ 53:0] mem_id_bus,
+    output          mem_ex,
     output          ertn_flush 
 );
 
@@ -46,6 +47,7 @@ module MEM (
     wire            ertn_flush;
     wire            mem_syscall_ex;
     wire            mem_csr;
+    wire            mem_ex;
     
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
 
@@ -71,6 +73,7 @@ module MEM (
 
     
     assign  ertn_flush = mem_valid & mem_ertn;
+    assign  mem_ex = mem_valid & mem_syscall_ex;
     assign  mem_ready_go = 1'b1;
     assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;

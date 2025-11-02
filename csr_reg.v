@@ -118,7 +118,7 @@ module csr_reg (
         csr_estat_is[11] <= 1'b0;              
         csr_estat_is[12] <= ipi_int_in;   
     end
-    
+
     // ---------- ESTAT.ECODE & ESUBCODE ----------
     always @(posedge clk) begin
         if (wb_ex) begin
@@ -177,6 +177,6 @@ module csr_reg (
                         (csr_num==`CSR_SAVE3)  ? csr_save3 : 32'b0;
 
     assign ex_entry = {csr_eentry_va, 6'b0};
-    assign ertn_entry = csr_era_pc;
+    assign ertn_entry = csr_era_pc + 32'h4;
 
 endmodule
