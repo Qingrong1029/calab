@@ -1,22 +1,37 @@
+`include "defines.vh"
+
 module WB (
     input           clk,
     input           resetn,
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [101:0] mem_wb_bus,
+    input   [184:0] mem_wb_bus,
 
-    output  [ 37:0] wb_id_bus,
+    output  [ 38:0] wb_id_bus,
 
     output  [ 31:0] debug_wb_pc,
     output  [  3:0] debug_wb_rf_we,
     output  [  4:0] debug_wb_rf_wnum,
-    output  [ 31:0] debug_wb_rf_wdata
+    output  [ 31:0] debug_wb_rf_wdata,
+    
+    //csr
+    output  [13:0]  csr_num,
+    output          csr_re,
+    input   [31:0]  csr_rvalue,
 
+    output          csr_we,
+    output  [31:0]  csr_wvalue,
+    output  [31:0]  csr_wmask,
+    output          ertn_flush,
+    output          wb_ex,
+    output  [31:0]  wb_csr_pc,
+    output  [ 5:0]  wb_ecode,
+    output  [ 8:0]  wb_esubcode
 );
 
     reg             wb_valid;
-    reg     [101:0] mem_wb_bus_vld;
+    reg     [183:0] mem_wb_bus_vld;
     wire            wb_ready_go;
     wire            wb_gr_we;
     wire            rf_we;
@@ -26,6 +41,15 @@ module WB (
     wire    [  4:0] rf_waddr;
     wire    [ 31:0] rf_wdata;
     wire    [  4:0] wb_dest;
+    wire    [ 31:0] wb_wdata; 
+    //csr exp12
+    wire            wb_csr_we;
+    wire            wb_csr_re;
+    wire    [13:0]  wb_csr_num;
+    wire    [31:0]  wb_csr_wmask;
+    wire    [31:0]  wb_csr_wvalue;
+    wire            wb_ertn;
+    
     assign wb_ready_go = 1'b1;
     assign wb_allowin = wb_ready_go | ~wb_valid;
     always @(posedge clk ) begin
@@ -42,16 +66,30 @@ module WB (
         end
     end
     assign  {
-        wb_gr_we, wb_pc, wb_inst, final_result, wb_dest
+        wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
+        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex
     } = mem_wb_bus_vld;
     assign  rf_we = wb_valid & wb_gr_we;
     assign  rf_waddr = wb_dest; 
-    assign  rf_wdata = final_result;
+    assign  rf_wdata = wb_wdata;
     assign  wb_id_bus = {
-        rf_we, rf_waddr, rf_wdata
+        rf_we, rf_waddr, rf_wdata, csr_re
     };
+    assign wb_ex = wb_valid & (wb_syscall_ex);//可以加别的异常
+    assign wb_ecode = wb_syscall_ex ? `ECODE_SYS : 6'b0;
+    assign wb_esubcode = 9'b0;  // syscall没有子编码
+    assign wb_csr_pc = wb_pc;
+    assign ertn_flush = wb_valid & wb_ertn;
+    //csr
+    assign wb_wdata = csr_re ? csr_rvalue : final_result;
+    assign csr_num = wb_csr_num;
+    assign csr_re = wb_csr_re | wb_csr_we;
+    assign csr_we = wb_csr_we;
+    assign csr_wvalue = wb_csr_wvalue;
+    assign csr_wmask = wb_csr_wmask;
+
     assign  debug_wb_pc = wb_pc;
     assign  debug_wb_rf_we = {4{rf_we}};
     assign  debug_wb_rf_wnum = wb_dest;
-    assign  debug_wb_rf_wdata = final_result;
+    assign  debug_wb_rf_wdata = wb_wdata;
 endmodule

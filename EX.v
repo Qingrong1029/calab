@@ -4,28 +4,35 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [191:0] id_ex_bus,
+    input   [273:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
-    output  [107:0] ex_mem_bus,
+    input           wb_ex,
+    output  [189:0] ex_mem_bus,
 
     output          data_sram_en,
     output  [ 3:0]  data_sram_we,
     output  [31:0]  data_sram_addr,
     output  [31:0]  data_sram_wdata,
 
-    output  [39:0]  ex_id_bus
+    output  [55:0]  ex_id_bus,
+    //ertn
+    input           mem_ex,
+    input           ertn_flush
+
 );
 
     reg             ex_valid;
+    wire            wb_ex;
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [191:0] id_ex_bus_vld;
+    reg     [273:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
+    wire ex_syscall_ex;
     
     //block
     assign  ex_ready_go = (ex_div_en) ? div_done : 1'b1;
@@ -33,6 +40,9 @@ module EX (
     assign  ex_allowin = ex_mem_valid & mem_allowin | ~ex_valid;
     always @(posedge clk ) begin
         if (~resetn) begin
+            ex_valid <= 1'b0;
+        end
+        else if(wb_ex) begin
             ex_valid <= 1'b0;
         end
         else if(ex_allowin) begin
@@ -55,7 +65,15 @@ module EX (
     wire    [ 4:0]  ex_dest;
     wire    [31:0]  rkd_value;
     wire    [31:0]  st_data;
-    
+    //csr exp12
+    wire            ex_csr_we;
+    wire            ex_csr_re;
+    wire    [13:0]  ex_csr_num;
+    wire    [31:0]  ex_csr_wmask;
+    wire    [31:0]  ex_csr_wvalue;
+    wire            ex_ertn;
+    wire            ex_csr;
+
     wire            inst_st_w;
     wire            inst_st_b;
     wire            inst_st_h;
@@ -63,7 +81,7 @@ module EX (
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex
     } = id_ex_bus_vld;
 
     wire    [31:0]  alu_result;
@@ -100,23 +118,26 @@ module EX (
                                     rkd_value[31:0];
     
     assign  data_sram_en = 1'b1;
-    assign  data_sram_we = inst_st_b ? (
-                                       mem_addr_low2 == 2'b00 ? 4'b0001 :
-                                       mem_addr_low2 == 2'b01 ? 4'b0010 :
-                                       mem_addr_low2 == 2'b10 ? 4'b0100 :
-                                                                4'b1000): 
-                           inst_st_h ? (
-                                       mem_addr_low2 == 2'b00 ? 4'b0011 :
-                                                                4'b1100): // alu_result[1:0] == 2'b10
-                           inst_st_w ? 4'b1111 : 4'b0000;  // st.w 指令;
+    assign  data_sram_we = (~wb_ex & ~ertn_flush & ~mem_ex) ? (
+                    inst_st_b ? (
+                        mem_addr_low2 == 2'b00 ? 4'b0001 :
+                        mem_addr_low2 == 2'b01 ? 4'b0010 :
+                        mem_addr_low2 == 2'b10 ? 4'b0100 :
+                                                 4'b1000
+                    ) : inst_st_h ? (
+                        mem_addr_low2 == 2'b00 ? 4'b0011 :
+                                                 4'b1100
+                    ) : inst_st_w ? 4'b1111 : 4'b0000
+                ) : 4'b0000;  // ERTN flush 时禁止写
     assign  data_sram_addr = {alu_result[31:2],2'b00};
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        ex_dest,ex_pc, ex_inst, ex_final_result
+        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn,ex_syscall_ex 
     };
+    assign ex_csr = ex_csr_re | ex_csr_we;
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
-    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy};
+    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr , ex_csr_num};
 endmodule

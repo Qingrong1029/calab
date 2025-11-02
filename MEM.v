@@ -4,23 +4,27 @@ module MEM (
 
     output          mem_allowin,
     input           ex_mem_valid,
-    input   [107:0] ex_mem_bus,
+    input   [189:0] ex_mem_bus,
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [101:0] mem_wb_bus,
+    output  [184:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
+    input           wb_ex,
+  
 
-    output  [ 38:0]  mem_id_bus
-
+    output  [ 53:0] mem_id_bus,
+    output          mem_ex,
+    input           ertn_flush
 );
 
     reg             mem_valid;
+    wire            wb_ex;
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
-    reg     [107:0] ex_mem_bus_vld;
+    reg     [189:0] ex_mem_bus_vld;
     wire            mem_gr_we;
     wire            res_from_mem;
     wire    [  4:0] mem_dest;
@@ -34,6 +38,17 @@ module MEM (
     wire    [ 15:0] halfword_data;
     wire    [  7:0] byte_data;
     wire    [ 31:0] extended_data;
+    //csr exp12
+    wire            mem_csr_we;
+    wire            mem_csr_re;
+    wire    [13:0]  mem_csr_num;
+    wire    [31:0]  mem_csr_wmask;
+    wire    [31:0]  mem_csr_wvalue;
+    wire            mem_ertn;
+    wire            ertn_flush;
+    wire            mem_syscall_ex;
+    wire            mem_csr;
+    wire            mem_ex;
     
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
 
@@ -57,11 +72,18 @@ module MEM (
                        (mem_type == 3'b101) ? zero_extended_half :  // ld.hu: 半字零扩展
                        zero_extended_byte;  // ld.bu: 字节零扩展
 
+    assign  mem_ex = mem_valid & (mem_syscall_ex | mem_ertn);
     assign  mem_ready_go = 1'b1;
-    assign  mem_wb_valid = mem_ready_go & mem_valid;
+    assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex & ~ertn_flush;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
         if (~resetn) begin
+            mem_valid <= 1'b0;
+        end
+        else if (wb_ex) begin
+            mem_valid <= 1'b0;
+        end
+        else if (ertn_flush) begin
             mem_valid <= 1'b0;
         end
         else if(mem_allowin) begin
@@ -75,12 +97,15 @@ module MEM (
     end
     assign {
         mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        mem_dest, mem_pc, mem_inst, alu_result
+        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex
     } = ex_mem_bus_vld;
     assign  final_result = res_from_mem ? extended_data : alu_result;
     assign  mem_wb_bus = {
-        mem_gr_we, mem_pc, mem_inst, final_result, mem_dest
+        mem_gr_we, mem_pc, mem_inst, final_result, mem_dest,
+        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
-    assign  mem_id_bus = {mem_bypass , mem_dest , final_result};
+    assign  mem_csr = mem_csr_re | mem_csr_we;
+    
+    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr , mem_csr_num};
 endmodule
