@@ -9,7 +9,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [273:0] id_ex_bus,
+    output  [275:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
@@ -88,6 +88,7 @@ module ID (
     wire        src2_is_imm;
     wire        res_from_mem;
     wire        dst_is_r1;
+    wire        dst_is_rj;
     wire        id_gr_we;
     wire        src_reg_is_rd;
     wire [4:0]  id_dest;
@@ -173,6 +174,11 @@ module ID (
     wire        inst_csrxchg;
     wire        inst_ertn;
     wire        inst_syscall;
+    
+    //exp13
+    wire        inst_rdcntid;
+    wire        inst_rdcntvl;
+    wire        inst_rdcntvh;
 
     wire        need_ui5;
     wire        need_si12;
@@ -281,6 +287,10 @@ module ID (
     assign inst_csrxchg= op_31_26_d[6'h01] & op_25_24_d[2'h0] & ~op_9_5_d[5'h0] & ~op_9_5_d[5'h1];
     assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & id_inst[14:10] == 5'b01110;
     assign inst_syscall= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
+    //exp13
+    assign inst_rdcntid= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h18) & (rd == 5'h00);
+    assign inst_rdcntvl= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h18) & (rj == 5'h00);
+    assign inst_rdcntvh= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h19) & (rj == 5'h00);
     
     assign alu_op[ 0] = inst_add_w | inst_addi_w
                       | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
@@ -360,9 +370,11 @@ module ID (
                         
     assign res_from_mem  = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu;
     assign dst_is_r1     = inst_bl;
+    assign dst_is_rj     = inst_rdcntid;
     assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b &
                        ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
-    assign id_dest       = dst_is_r1 ? 5'd1 : rd;
+    assign id_dest       = dst_is_r1 ? 5'd1 :
+                           dst_is_rj ? rj   : rd;
 
     assign rf_raddr1 = rj;
     assign rf_raddr2 = src_reg_is_rd ? rd :rk;
@@ -409,9 +421,9 @@ module ID (
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
-    assign id_csr_re  = inst_csrrd;
+    assign id_csr_re  = inst_csrrd | inst_csrwr | inst_csrxchg | inst_rdcntid ;
     assign id_csr_we  = inst_csrwr | inst_csrxchg;
-    assign id_csr_num = id_inst[23:10];
+    assign id_csr_num = inst_rdcntid ? 14'H40 : id_inst[23:10];
     assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;
     assign id_csr_wvalue = rkd_value;
     assign id_syscall_ex = inst_syscall & id_valid;
@@ -419,7 +431,8 @@ module ID (
     assign id_ex_bus = {
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, inst_ertn, id_syscall_ex
+        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
+        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh
     };
 
     assign id_if_bus = {

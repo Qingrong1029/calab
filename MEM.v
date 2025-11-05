@@ -47,7 +47,6 @@ module MEM (
     wire            mem_ertn;
     wire            ertn_flush;
     wire            mem_syscall_ex;
-    wire            mem_csr;
     wire            mem_ex;
     
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
@@ -105,7 +104,6 @@ module MEM (
         mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
-    assign  mem_csr = mem_csr_re | mem_csr_we;
     
-    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr , mem_csr_num};
+    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr_re , mem_csr_num};
 endmodule
