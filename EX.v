@@ -41,7 +41,7 @@ module EX (
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
-    wire ex_syscall_ex;
+    wire            ex_syscall_ex;
     
     //block
     assign  ex_ready_go = (ex_div_en) ? div_done : 1'b1;
@@ -86,7 +86,7 @@ module EX (
     wire            inst_st_b;
     wire            inst_st_h;
     wire            ex_rdcntvl;
-    wire            ex_rdcntvl;
+    wire            ex_rdcntvh;
     
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,

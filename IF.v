@@ -5,7 +5,7 @@ module IF (
     input           id_allowin,
     
     output          if_id_valid,
-    output  [63:0]  if_id_bus,
+    output  [64:0]  if_id_bus,
     input   [32:0]  id_if_bus,
     input           wb_ex,
     
@@ -28,6 +28,7 @@ module IF (
     wire    [31:0]  if_nextpc;
     wire    [31:0]  br_target;
     wire    [31:0]  seq_pc;
+    wire            if_adef;
 
     assign  if_ready_go = 1'b1;
     assign  if_allowin = ~resetn | if_ready_go & id_allowin |ertn_flush |wb_ex;
@@ -43,7 +44,7 @@ module IF (
         end
     end
     assign  if_id_valid = if_ready_go & if_valid & ~ertn_flush & ~wb_ex; 
-    assign  if_id_bus = { if_pc, if_inst };
+    assign  if_id_bus = { if_pc, if_inst, if_adef };
 
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
@@ -51,6 +52,7 @@ module IF (
                  if_br_taken ? br_target :
                  ertn_flush  ? ertn_entry :
                                seq_pc;
+    assign if_adef = if_nextpc[1] | if_nextpc[0];
 
     always @(posedge clk ) begin
         if(~resetn)begin

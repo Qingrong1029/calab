@@ -22,6 +22,7 @@ module csr_reg (
     input  wire [8:0]  wb_esubcode,
     output  wire [31:0] ertn_entry,
     output wire [31:0] ex_entry,
+    output wire        has_int,
     
     input  wire [7:0]  hw_int_in,
     input              ipi_int_in,
@@ -279,5 +280,9 @@ module csr_reg (
 
     assign ex_entry = {csr_eentry_va, 6'b0};
     assign ertn_entry = csr_era_pc;
+    
+    wire int_pending = |(csr_estat_is[11:0] & csr_ecfg_lie[11:0]);
+    assign has_int = csr_crmd_ie && int_pending;
+
 
 endmodule
