@@ -4,7 +4,7 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [273:0] id_ex_bus,
+    input   [275:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
@@ -22,7 +22,16 @@ module EX (
     input           ertn_flush
 
 );
-
+    //exp13
+    reg [63:0] cnt_value;
+    
+    always @(posedge clk) begin
+        if (~resetn)
+            cnt_value <= 64'b0;
+        else
+            cnt_value <= cnt_value + 1'b1;  // 每周期自增
+    end
+    
     reg             ex_valid;
     wire            wb_ex;
     wire            ex_ready_go;
@@ -72,16 +81,17 @@ module EX (
     wire    [31:0]  ex_csr_wmask;
     wire    [31:0]  ex_csr_wvalue;
     wire            ex_ertn;
-    wire            ex_csr;
 
     wire            inst_st_w;
     wire            inst_st_b;
     wire            inst_st_h;
+    wire            ex_rdcntvl;
+    wire            ex_rdcntvl;
     
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh
     } = id_ex_bus_vld;
 
     wire    [31:0]  alu_result;
@@ -111,7 +121,9 @@ module EX (
         .div_done    (div_done)
     );
 
-    wire [31:0] ex_final_result = ex_div_en ? div_result : alu_result;
+    wire [31:0] ex_final_result = ex_rdcntvl ? cnt_value[31:0]  : 
+                                  ex_rdcntvh ? cnt_value[63:32] :
+                                  ex_div_en  ? div_result       : alu_result;
     
     assign st_data = inst_st_b ? {4{rkd_value[ 7:0]}} :
                      inst_st_h ? {2{rkd_value[15:0]}} :
@@ -135,9 +147,8 @@ module EX (
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
         ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn,ex_syscall_ex 
     };
-    assign ex_csr = ex_csr_re | ex_csr_we;
     assign ex_bypass = ex_valid & ex_gr_we;
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
-    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr , ex_csr_num};
+    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr_re , ex_csr_num};
 endmodule
