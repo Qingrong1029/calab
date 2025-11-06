@@ -4,40 +4,46 @@
 module csr_reg (
     input  wire        clk,
     input  wire        resetn,
-
-    // 指令访问接口
-    input  wire        csr_re,
-    input  wire [13:0] csr_num,
+    input  wire [168:0]wb_csr_bus,
     output wire [31:0] csr_rvalue,
-    input  wire        csr_we,
-    input  wire [31:0] csr_wmask,
-    input  wire [31:0] csr_wvalue,
-
-    // 异常、返回
-    input  wire        ertn_flush,
-    input  wire        wb_ex,
-    input  wire [31:0] wb_csr_pc,
-    input  wire [31:0] wb_vaddr,
-    input  wire [5:0]  wb_ecode,
-    input  wire [8:0]  wb_esubcode,
-    output  wire [31:0] ertn_entry,
+    output wire [31:0] ertn_entry,
     output wire [31:0] ex_entry,
     output wire        has_int,
-    
-    input  wire [7:0]  hw_int_in,
-    input              ipi_int_in,
-    
-    input  wire [31:0] coreid_in
+    input  wire        ertn_flush,
+    input  wire        wb_ex
 );
 
     // ----------------------------------------
     // ====== CSR 各域定义 ======
     // ----------------------------------------
+    
+    // 指令访问接口
+    wire        csr_re;
+    wire [13:0] csr_num;
+    wire [31:0] csr_rvalue;
+    wire        csr_we;
+    wire [31:0] csr_wmask;
+    wire [31:0] csr_wvalue;
 
+    // 异常、返回
+    wire [31:0] wb_csr_pc;
+    wire [31:0] wb_vaddr;
+    wire [5:0]  wb_ecode;
+    wire [8:0]  wb_esubcode;
+    
+    wire [7:0]  hw_int_in;
+    wire        ipi_int_in;
+    
+    wire [31:0] coreid_in;
+    
+     assign {csr_re, csr_we, csr_num, csr_wmask, csr_wvalue, wb_csr_pc, 
+            wb_ecode, wb_esubcode, ipi_int_in, coreid_in, hw_int_in, wb_vaddr} 
+            = wb_csr_bus;
+            
     // CRMD
-    reg [1:0] csr_crmd_plv;
-    reg       csr_crmd_ie;
-    wire      csr_crmd_da, csr_crmd_pg;
+    reg  [1:0] csr_crmd_plv;
+    reg        csr_crmd_ie;
+    wire       csr_crmd_da, csr_crmd_pg;
     wire [1:0] csr_crmd_datf, csr_crmd_datm;
 
     // PRMD
