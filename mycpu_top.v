@@ -155,7 +155,7 @@ module mycpu_top(
         .wb_csr_pc          (wb_csr_pc),
         .wb_ecode           (wb_ecode),
         .wb_esubcode        (wb_esubcode),
-        .wb_wrong_addr      (wb_wrong_addr)
+        .wb_vaddr      (wb_vaddr)
     );
     csr_reg csr(
         .clk                (clk),

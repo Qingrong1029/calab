@@ -485,10 +485,15 @@ assign id_store_op[2] = inst_st_w;
             (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)) ||
             (wb_csr  & rf_we     & (rf_waddr    == id_csr_num));
 
-    assign block_not = csr_unblock || 
-                    (rf_we & (rf_waddr != 0) & 
-                      ((ex_dest == rf_raddr1) &( need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1)) |
-                      (ex_dest == rf_raddr2) & (need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))));
+   assign block_not = (csr_unblock || 
+                   // 情况1: CSR读写操作的数据前推
+                   ((id_csr_re | id_csr_we) & (rf_waddr != 0) &
+                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
+                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))) ||
+                   // 情况2: 写回阶段的CSR数据前推  
+                   (rf_we & wb_csr & (rf_waddr != 0) &
+                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
+                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))))&csr_block;
     
     reg block_not_prev;  // 记录上一拍的block_not状态
     

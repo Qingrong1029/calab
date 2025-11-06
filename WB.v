@@ -28,7 +28,7 @@ module WB (
     output  [31:0]  wb_csr_pc,
     output  [ 5:0]  wb_ecode,
     output  [ 8:0]  wb_esubcode,
-    output  [31:0]  wb_wrong_addr
+    output  [31:0]  wb_vaddr
 );
 
     reg             wb_valid;
@@ -51,7 +51,8 @@ module WB (
     wire    [31:0]  wb_csr_wvalue;
     wire            wb_ertn;
 
-    wire    [31:0]  wb_wrong_addr;    // 错误地址
+    wire    [31:0]  wb_wrong_addr;  
+    wire     [31:0] wb_vaddr; // 错误地址
     wire            wb_ex_id;         // 从ID传来的异常
     wire    [ 8:0]  wb_esubcode;      // 异常子码
     wire    [ 5:0]  wb_ecode;         // 异常编码
@@ -98,7 +99,7 @@ module WB (
     assign csr_we = wb_csr_we;
     assign csr_wvalue = wb_csr_wvalue;
     assign csr_wmask = wb_csr_wmask;
-
+    assign wb_vaddr = wb_wrong_addr;
     assign  debug_wb_pc = wb_pc;
     assign  debug_wb_rf_we = {4{rf_we}};
     assign  debug_wb_rf_wnum = wb_dest;
