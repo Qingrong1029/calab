@@ -49,24 +49,25 @@
 `define CSR_MASK       14'h3fff   // CSR 地址掩码
 
 // 例外编码 (Ecode) 宏定义
-`define ECODE_INT        5'h00    // 中断
-`define ECODE_PIL        5'h01    // load操作页无效例外
-`define ECODE_PIS        5'h02    // store操作页无效例外
-`define ECODE_PIF        5'h03    // 取指操作页无效例外
-`define ECODE_PME        5'h04    // 页修改例外
-`define ECODE_PPI        5'h07    // 页特权等级不合规例外
-`define ECODE_ADEF       5'h08    // 取指地址错例外
-`define ECODE_ALE        5'h09    // 地址非对齐例外
-`define ECODE_SYS        5'h0B    // 系统调用例外
-`define ECODE_BRK        5'h0C    // 断点例外
-`define ECODE_INE        5'h0D    // 指令不存在例外
-`define ECODE_IPE        5'h0E    // 指令特权等级错例外
-`define ECODE_FPD        5'h0F    // 浮点指令未使能例外
-`define ECODE_FPE        5'h12    // 基础浮点指令例外
-`define ECODE_TLBR       5'h3F    // TLB重填例外
+`define ECODE_INT        6'h00    // 中断
+`define ECODE_PIL        6'h01    // load操作页无效例外
+`define ECODE_PIS        6'h02    // store操作页无效例外
+`define ECODE_PIF        6'h03    // 取指操作页无效例外
+`define ECODE_PME        6'h04    // 页修改例外
+`define ECODE_PPI        6'h07    // 页特权等级不合规例外
+`define ECODE_ADE        6'h08    // 取指地址错例外
+`define ECODE_ALE        6'h09    // 地址非对齐例外
+`define ECODE_SYS        6'h0B    // 系统调用例外
+`define ECODE_BRK        6'h0C    // 断点例外
+`define ECODE_INE        6'h0D    // 指令不存在例外
+`define ECODE_IPE        6'h0E    // 指令特权等级错例外
+`define ECODE_FPD        6'h0F    // 浮点指令未使能例外
+`define ECODE_FPE        6'h12    // 基础浮点指令例外
+`define ECODE_TLBR       6'h3F    // TLB重填例外
+`define ESUBCODE_ADEF    9'h0
 
 // EsubCode 宏定义（针对有子编码的例外）
-`define ESUB_ADEF        3'h0     // 取指地址错例外
+`define ESUB_ADE         3'h0     // 取指地址错例外
 `define ESUB_ADEM        3'h1     // 访存指令地址错例外
 
 // 保留编码范围
@@ -79,7 +80,16 @@
 `define CSR_PRMD_PIE    2
 `define CSR_ECFG_LIE    12:0
 `define CSR_ESTAT_IS10  1 :0
+`define CSR_TICLR_CLR   0
 `define CSR_ERA_PC      31:0
+`define CSR_BADV_VADDR  31:0
 `define CSR_EENTRY_VA   31:6
 `define CSR_SAVE_DATA   31:0
 `define CSR_TID_TID     31:0
+`define CSR_TCFG_EN     0
+`define CSR_TCFG_PERIOD 1
+`define CSR_TCFG_INITV  31:2
+`define CSR_TVAL_TIMEVAL 31:0
+`define CSR_TICLR_CLR   0
+`define CSR_CPUID_COREID  8 :0
+`define CSR_CPUID_CPUTYPE 31:9
