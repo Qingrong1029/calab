@@ -8,7 +8,7 @@ module MEM (
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [232:0] mem_wb_bus,
+    output  [231:0] mem_wb_bus,
 
     input   [ 31:0] data_sram_rdata,
     input           wb_ex,
@@ -105,9 +105,10 @@ module MEM (
 
     assign {
         mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex, mem_esubcode, mem_ecode
+        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex_id, mem_esubcode, mem_ecode
     } = ex_mem_bus_vld;
     assign  final_result = res_from_mem ? extended_data : alu_result;
+    assign mem_ex= mem_valid & mem_ex_id;
     assign  mem_wb_bus = {
         mem_gr_we, mem_pc, mem_inst, final_result, mem_dest,
         mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn, mem_syscall_ex, mem_wrong_addr,mem_ex, mem_esubcode, mem_ecode

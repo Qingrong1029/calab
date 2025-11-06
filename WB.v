@@ -27,7 +27,8 @@ module WB (
     output          wb_ex,
     output  [31:0]  wb_csr_pc,
     output  [ 5:0]  wb_ecode,
-    output  [ 8:0]  wb_esubcode
+    output  [ 8:0]  wb_esubcode,
+    output  [ 31:0] wb_wrong_addr
 );
 
     reg             wb_valid;
@@ -61,6 +62,9 @@ module WB (
         if (~resetn) begin
             wb_valid <= 1'b0;
         end
+        else if (wb_ex) begin
+            wb_valid <= 1'b0;
+        end
         else if (wb_allowin) begin
             wb_valid <= mem_wb_valid;
         end
@@ -80,8 +84,7 @@ module WB (
     assign  wb_id_bus = {
         rf_we, rf_waddr, rf_wdata, csr_re
     };
-    assign wb_ex = wb_valid & (wb_syscall_ex | wb_ex_id | wb_ertn);//可以加别的异常
-    assign wb_ecode = wb_ecode;
+    assign wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
     assign wb_esubcode = wb_ex_id ? wb_esubcode : 9'b0;  // syscall没有子编码
     assign wb_csr_pc = wb_pc;
     assign ertn_flush = wb_valid & wb_ertn;
