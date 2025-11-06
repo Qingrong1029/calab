@@ -28,6 +28,8 @@ module ID (
     wire    [31:0]  br_target;
     reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
+    wire            id_adef;
+    wire    [31:0]  id_wrong_addr;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
     
@@ -50,14 +52,14 @@ module ID (
     wire    [13:0]  mem_csr_num;
     
     assign mem_type = inst_ld_w  ? 3'b000 :  // word
-                  inst_st_w  ? 3'b000 :  // word
-                  inst_ld_h  ? 3'b001 :  // halfword
-                  inst_st_h  ? 3'b001 :  // halfword
-                  inst_ld_hu ? 3'b101 :  // halfword unsigned
-                  inst_ld_b  ? 3'b010 :  // byte
-                  inst_st_b  ? 3'b010 :  // byte
-                  inst_ld_bu ? 3'b110 :  // byte unsigned
-                  3'b000;
+                      inst_st_w  ? 3'b000 :  // word
+                      inst_ld_h  ? 3'b001 :  // halfword
+                      inst_st_h  ? 3'b001 :  // halfword
+                      inst_ld_hu ? 3'b101 :  // halfword unsigned
+                      inst_ld_b  ? 3'b010 :  // byte
+                      inst_st_b  ? 3'b010 :  // byte
+                      inst_ld_bu ? 3'b110 :  // byte unsigned
+                      3'b000;
     
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr, ex_csr_num} =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
@@ -84,8 +86,7 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_exc_data, id_pc, id_inst} = if_id_bus_vld;
-    assign {id_adef, id_wrong_addr} = id_exc_data;
+    assign {id_wrong_addr,id_adef, id_pc, id_inst} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
     wire        src1_is_pc;
@@ -218,13 +219,11 @@ module ID (
     //exception exp13
     wire        id_ine;
     wire        id_adef;
-    wire        id_ecode;
+    wire [5:0]  id_ecode;
 
         // 增加load/store操作类型，用于EX阶段ALE检测
     wire    [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
     wire    [2:0]  id_store_op;  // st_b, st_h, st_w
-    wire    [31:0]  id_wrong_addr;
-    wire    [32:0]  id_exc_data;
     wire    [ 8:0]  id_esubcode;
     
     assign op_31_26  = id_inst[31:26];
@@ -462,10 +461,7 @@ assign id_store_op[2] = inst_st_w;
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
         id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
-        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_load_op, id_store_op,    // 用于EX阶段ALE检测
-    id_adef, id_wrong_addr,     // ADEF异常信息
-    id_ertn_flush, id_ex,       // 异常控制信号  
-    id_esubcode, id_ecode  
+        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode  
     };
 
     assign id_if_bus = {

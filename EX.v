@@ -111,10 +111,7 @@ module EX (
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh,    ex_load_op, ex_store_op,     // load/store操作类型
-    ex_adef, ex_wrong_addr,      // ADEF异常信息  
-    ex_ertn_flush, ex_ex,        // 异常控制信号
-    ex_esubcode, ex_ecode 
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
     } = id_ex_bus_vld;
 
     wire    [31:0]  alu_result;
@@ -171,7 +168,7 @@ module EX (
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn,ex_syscall_ex ,ex_ale,ex_adef, final_wrong_addr, ex_ertn_flush, ex_ex, ex_esubcode, ex_ecode
+        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode
     };
 
     // 添加异常优先级处理逻辑
@@ -180,7 +177,7 @@ module EX (
 
 // 修改ALE检测，确保只在有效操作时检测
     assign ex_ale = (ld_ale | st_ale) & ex_valid & (|ex_load_op | |ex_store_op);
-    assign ex_bypass = ex_valid & ex_gr_we&~final_ex;
+    assign ex_bypass = ex_valid & ex_gr_we& ~final_ex;
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
     assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr_re , ex_csr_num};
