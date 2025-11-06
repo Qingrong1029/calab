@@ -21,17 +21,17 @@ module mycpu_top(
 );
     wire            id_allowin;
     wire            if_id_valid;
-    wire    [ 63:0] if_id_bus;
+    wire    [ 96:0] if_id_bus;
     wire    [ 32:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [273:0] id_ex_bus;
+    wire    [332:0] id_ex_bus;
     wire    [ 38:0] wb_id_bus;
-    wire    [189:0] ex_mem_bus;
+    wire    [239:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
     wire            mem_wb_valid;
-    wire    [183:0] mem_wb_bus;
+    wire    [232:0] mem_wb_bus;
     wire            wb_allowin;
     wire    [ 53:0] mem_id_bus;
     wire    [ 55:0] ex_id_bus;
@@ -56,6 +56,8 @@ module mycpu_top(
     wire    [7:0]   hw_int_in  = 8'b0;
     wire            ipi_int_in = 1'b0;
     wire            mem_ex;
+    wire            has_int;
+    wire            id_has_int;
     
     IF my_IF (
         .clk                (clk),
@@ -88,6 +90,7 @@ module mycpu_top(
         .mem_id_bus         (mem_id_bus),
         .ex_id_bus          (ex_id_bus),
         .ertn_flush         (ertn_flush),
+        .id_has_int         (has_int),
         .wb_ex              (wb_ex | ertn_flush)
     );
     EX  my_EX (
@@ -169,6 +172,7 @@ module mycpu_top(
         .wb_ecode           (wb_ecode),
         .wb_esubcode        (wb_esubcode),
         
+        .has_int            (has_int),
         .hw_int_in          (hw_int_in),
         .ipi_int_in         (ipi_int_in)
         

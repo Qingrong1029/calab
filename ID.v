@@ -1,21 +1,24 @@
+`include "defines.vh"
+
 module ID (
     input           clk,
     input           resetn,
 
     input           if_id_valid,
     output          id_allowin,
-    input   [63:0]  if_id_bus,
+    input   [96:0]  if_id_bus,
     output  [32:0]  id_if_bus,
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [273:0] id_ex_bus,
+    output  [332:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
     input   [ 53:0] mem_id_bus,
     input   [ 55:0] ex_id_bus,
-    input           ertn_flush
+    input           ertn_flush,
+    input           id_has_int
 );
     reg             id_valid;
     wire            id_ready_go;
@@ -23,8 +26,10 @@ module ID (
     wire    [31:0]  id_pc;
     wire            br_taken;
     wire    [31:0]  br_target;
-    reg     [63:0]  if_id_bus_vld;
+    reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
+    wire            id_adef;
+    wire    [31:0]  id_wrong_addr;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
     
@@ -47,14 +52,14 @@ module ID (
     wire    [13:0]  mem_csr_num;
     
     assign mem_type = inst_ld_w  ? 3'b000 :  // word
-                  inst_st_w  ? 3'b000 :  // word
-                  inst_ld_h  ? 3'b001 :  // halfword
-                  inst_st_h  ? 3'b001 :  // halfword
-                  inst_ld_hu ? 3'b101 :  // halfword unsigned
-                  inst_ld_b  ? 3'b010 :  // byte
-                  inst_st_b  ? 3'b010 :  // byte
-                  inst_ld_bu ? 3'b110 :  // byte unsigned
-                  3'b000;
+                      inst_st_w  ? 3'b000 :  // word
+                      inst_ld_h  ? 3'b001 :  // halfword
+                      inst_st_h  ? 3'b001 :  // halfword
+                      inst_ld_hu ? 3'b101 :  // halfword unsigned
+                      inst_ld_b  ? 3'b010 :  // byte
+                      inst_st_b  ? 3'b010 :  // byte
+                      inst_ld_bu ? 3'b110 :  // byte unsigned
+                      3'b000;
     
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr, ex_csr_num} =  ex_id_bus;
     assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
@@ -81,13 +86,14 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_pc, id_inst} = if_id_bus_vld;
+    assign {id_wrong_addr,id_adef, id_pc, id_inst} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
     wire        src1_is_pc;
     wire        src2_is_imm;
     wire        res_from_mem;
     wire        dst_is_r1;
+    wire        dst_is_rj;
     wire        id_gr_we;
     wire        src_reg_is_rd;
     wire [4:0]  id_dest;
@@ -173,6 +179,12 @@ module ID (
     wire        inst_csrxchg;
     wire        inst_ertn;
     wire        inst_syscall;
+    
+    //exp13
+    wire        inst_break;
+    wire        inst_rdcntid;
+    wire        inst_rdcntvl;
+    wire        inst_rdcntvh;
 
     wire        need_ui5;
     wire        need_si12;
@@ -203,6 +215,16 @@ module ID (
     wire [13:0] id_csr_num;
     wire [31:0] id_csr_wmask;
     wire [31:0] id_csr_wvalue;
+
+    //exception exp13
+    wire        id_ine;
+    wire        id_adef;
+    wire [5:0]  id_ecode;
+
+        // 增加load/store操作类型，用于EX阶段ALE检测
+    wire    [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
+    wire    [2:0]  id_store_op;  // st_b, st_h, st_w
+    wire    [ 8:0]  id_esubcode;
     
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
@@ -281,6 +303,11 @@ module ID (
     assign inst_csrxchg= op_31_26_d[6'h01] & op_25_24_d[2'h0] & ~op_9_5_d[5'h0] & ~op_9_5_d[5'h1];
     assign inst_ertn   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & id_inst[14:10] == 5'b01110;
     assign inst_syscall= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
+    //exp13
+    assign inst_break  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h14];
+    assign inst_rdcntid= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h18) & (rd == 5'h00);
+    assign inst_rdcntvl= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h18) & (rj == 5'h00);
+    assign inst_rdcntvh= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h19) & (rj == 5'h00);
     
     assign alu_op[ 0] = inst_add_w | inst_addi_w
                       | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
@@ -302,6 +329,18 @@ module ID (
     assign alu_op[12] = inst_mul_w;
     assign alu_op[13] = inst_mulh_w;
     assign alu_op[14] = inst_mulh_wu;
+
+
+// 定义load_op和store_op
+assign id_load_op[0] = inst_ld_b;
+assign id_load_op[1] = inst_ld_h; 
+assign id_load_op[2] = inst_ld_w;
+assign id_load_op[3] = inst_ld_bu;
+assign id_load_op[4] = inst_ld_hu;
+
+assign id_store_op[0] = inst_st_b;
+assign id_store_op[1] = inst_st_h;
+assign id_store_op[2] = inst_st_w;
 
     //除法器调用
     assign id_div_en =  inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
@@ -360,9 +399,11 @@ module ID (
                         
     assign res_from_mem  = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu;
     assign dst_is_r1     = inst_bl;
+    assign dst_is_rj     = inst_rdcntid;
     assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b &
                        ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
-    assign id_dest       = dst_is_r1 ? 5'd1 : rd;
+    assign id_dest       = dst_is_r1 ? 5'd1 :
+                           dst_is_rj ? rj   : rd;
 
     assign rf_raddr1 = rj;
     assign rf_raddr2 = src_reg_is_rd ? rd :rk;
@@ -409,9 +450,9 @@ module ID (
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
-    assign id_csr_re  = inst_csrrd;
+    assign id_csr_re  = inst_csrrd | inst_csrwr | inst_csrxchg | inst_rdcntid ;
     assign id_csr_we  = inst_csrwr | inst_csrxchg;
-    assign id_csr_num = id_inst[23:10];
+    assign id_csr_num = inst_rdcntid ? 14'H40 : id_inst[23:10];
     assign id_csr_wmask  = inst_csrxchg ? rj_value : 32'hffffffff;
     assign id_csr_wvalue = rkd_value;
     assign id_syscall_ex = inst_syscall & id_valid;
@@ -419,7 +460,8 @@ module ID (
     assign id_ex_bus = {
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, inst_ertn, id_syscall_ex
+        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
+        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode  
     };
 
     assign id_if_bus = {
@@ -476,4 +518,29 @@ module ID (
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
                           inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrrd | inst_csrwr | inst_csrxchg;
 
+    //指令不存在
+    assign id_ine = ~ ( inst_add_w     | inst_sub_w   | inst_slt     | inst_sltu      |
+                        inst_nor       | inst_and     | inst_or      | inst_xor       |   
+                        inst_slli_w    | inst_srli_w  | inst_srai_w  | inst_addi_w    | 
+                        inst_ld_w      | inst_st_w    | inst_jirl    | inst_b         |
+                        inst_bl        | inst_beq     | inst_bne     | inst_lu12i_w   |
+                        inst_slti      | inst_sltui   | inst_andi    | inst_ori       | 
+                        inst_xori      | inst_sll_w   | inst_srl_w   | inst_sra_w     |
+                        inst_mul_w     | inst_mulh_w  | inst_mulh_wu | inst_div_w     | 
+                        inst_mod_w     | inst_div_wu  | inst_mod_wu  | inst_pcaddu12i |
+                        inst_blt       | inst_bge     | inst_bltu    | inst_bgeu      | 
+                        inst_ld_b      | inst_ld_h    | inst_ld_bu   | inst_ld_hu     |
+                        inst_st_b      | inst_st_h    | inst_csrrd   | inst_csrwr     |
+                        inst_csrxchg   | inst_ertn    | inst_syscall | inst_break     |
+                        inst_rdcntvl   | inst_rdcntvh | inst_rdcntid );
+
+    assign id_ertn_flush = inst_ertn & id_valid;
+
+    assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef);
+    assign id_ecode = id_has_int   ? `ECODE_INT
+                    : id_adef      ? `ECODE_ADE
+                    : id_ine       ? `ECODE_INE
+                    : inst_break   ? `ECODE_BRK
+                    : inst_syscall ? `ECODE_SYS : 6'b0;
+    assign id_esubcode = id_adef ? `ESUBCODE_ADEF : 9'b0;
 endmodule
