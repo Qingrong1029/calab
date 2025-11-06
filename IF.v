@@ -50,8 +50,8 @@ module IF (
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
     assign  if_nextpc = wb_ex? ex_entry:
-                 if_br_taken ? br_target :
                  ertn_flush  ? ertn_entry :
+                 if_br_taken ? br_target :
                                seq_pc;
     assign if_adef = if_nextpc[1] | if_nextpc[0];
 
