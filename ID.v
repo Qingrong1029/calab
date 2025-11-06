@@ -86,7 +86,7 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_wrong_addr,id_adef, id_pc, id_inst} = if_id_bus_vld;
+    assign {id_adef,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
     wire        src1_is_pc;
@@ -501,7 +501,7 @@ assign id_store_op[2] = inst_st_w;
             block_not_prev <= block_not;
         end
     end
-    assign id_ready_go =  ertn_flush ? 1'b1 :
+    assign id_ready_go =  (ertn_flush | wb_ex) ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))

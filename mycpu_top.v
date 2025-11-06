@@ -50,15 +50,16 @@ module mycpu_top(
     wire    [31:0]  ertn_entry;
     wire    [5:0]   wb_ecode;
     wire    [8:0]   wb_esubcode;
+    wire    [31:0]  wb_wrong_addr;
     wire    [31:0]  wb_vaddr;
-    wire    [31:0]  coreid_in = 32'b0;
+    wire    [31:0]  coreid_in;
     wire            has_int;
     wire    [7:0]   hw_int_in  = 8'b0;
     wire            ipi_int_in = 1'b0;
     wire            mem_ex;
+    wire            mem_ertn;
     wire            has_int;
     wire            id_has_int;
-    wire    [31:0]  wb_wrong_addr;
     
     IF my_IF (
         .clk                (clk),
@@ -111,6 +112,7 @@ module mycpu_top(
         //ertn
         .ertn_flush         (ertn_flush),
         .mem_ex             (mem_ex),
+        .mem_ertn          (mem_ertn),
         .wb_ex              (wb_ex | ertn_flush)
     );
     MEM my_MEM (
@@ -127,6 +129,7 @@ module mycpu_top(
         //ertn
         .ertn_flush        (ertn_flush),
         .mem_ex            (mem_ex),
+        .mem_ertn          (mem_ertn),
         .wb_ex             (wb_ex | ertn_flush)
     );
     WB my_WB (
@@ -170,7 +173,7 @@ module mycpu_top(
 
         .wb_ex              (wb_ex),
         .wb_csr_pc          (wb_csr_pc),
-        .wb_vaddr           (wb_wrong_addr),
+        .wb_vaddr           (wb_vaddr),
         .wb_ecode           (wb_ecode),
         .wb_esubcode        (wb_esubcode),
         

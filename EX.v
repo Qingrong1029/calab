@@ -20,6 +20,7 @@ module EX (
     output  [55:0]  ex_id_bus,
     //ertn
     input           mem_ex,
+    input           mem_ertn,
     input           ertn_flush
 
 );
@@ -152,7 +153,7 @@ module EX (
                                     rkd_value[31:0];
     
     assign data_sram_en = ((|ex_load_op) | (|ex_store_op)) & ex_valid & 
-                     ~ex_ale & ~wb_ex & ~ertn_flush & ~mem_ex;
+                     ~ex_ale & ~wb_ex & ~ertn_flush & ~mem_ex & ~mem_ertn & ~final_ex & ~ex_ertn;
     assign  data_sram_we = (~wb_ex & ~ertn_flush & ~mem_ex&~ex_ale) ? (
                     inst_st_b ? (
                         mem_addr_low2 == 2'b00 ? 4'b0001 :
@@ -168,7 +169,8 @@ module EX (
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode
+        ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
+        ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode
     };
 
     // 添加异常优先级处理逻辑

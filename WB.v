@@ -28,7 +28,7 @@ module WB (
     output  [31:0]  wb_csr_pc,
     output  [ 5:0]  wb_ecode,
     output  [ 8:0]  wb_esubcode,
-    output  [ 31:0] wb_wrong_addr
+    output  [31:0]  wb_wrong_addr
 );
 
     reg             wb_valid;
@@ -65,6 +65,9 @@ module WB (
         else if (wb_ex) begin
             wb_valid <= 1'b0;
         end
+        else if (ertn_flush) begin
+            wb_valid <= 1'b0;
+        end
         else if (wb_allowin) begin
             wb_valid <= mem_wb_valid;
         end
@@ -78,7 +81,7 @@ module WB (
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
         wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex, wb_wrong_addr, wb_ex_id, wb_esubcode, wb_ecode
     } = mem_wb_bus_vld;
-    assign  rf_we = wb_valid & wb_gr_we;
+    assign  rf_we = wb_valid & wb_gr_we & ~wb_ex;
     assign  rf_waddr = wb_dest; 
     assign  rf_wdata = wb_wdata;
     assign  wb_id_bus = {
