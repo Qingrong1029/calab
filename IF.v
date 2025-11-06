@@ -51,8 +51,7 @@ module IF (
     assign  { if_br_taken, br_target } = id_if_bus;
     assign  if_nextpc = wb_ex? ex_entry:
                  if_br_taken ? br_target :
-                 ertn_flush  ? ertn_entry :
-                               seq_pc;
+                 ertn_flush  ? ertn_entry:seq_pc;
     assign if_adef = if_nextpc[1] | if_nextpc[0];
 
     always @(posedge clk ) begin
