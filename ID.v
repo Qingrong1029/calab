@@ -1,15 +1,17 @@
+`include "defines.vh"
+
 module ID (
     input           clk,
     input           resetn,
 
     input           if_id_valid,
     output          id_allowin,
-    input   [63:0]  if_id_bus,
+    input   [96:0]  if_id_bus,
     output  [32:0]  id_if_bus,
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [275:0] id_ex_bus,
+    output  [332:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
@@ -24,7 +26,7 @@ module ID (
     wire    [31:0]  id_pc;
     wire            br_taken;
     wire    [31:0]  br_target;
-    reg     [63:0]  if_id_bus_vld;
+    reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
@@ -82,7 +84,8 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_pc, id_inst, id_adef} = if_id_bus_vld;
+    assign {id_exc_data, id_pc, id_inst} = if_id_bus_vld;
+    assign {id_adef, id_wrong_addr} = id_exc_data;
     //译码
     wire [14:0] alu_op;
     wire        src1_is_pc;
@@ -216,6 +219,13 @@ module ID (
     wire        id_ine;
     wire        id_adef;
     wire        id_ecode;
+
+        // 增加load/store操作类型，用于EX阶段ALE检测
+    wire    [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
+    wire    [2:0]  id_store_op;  // st_b, st_h, st_w
+    wire    [31:0]  id_wrong_addr;
+    wire    [32:0]  id_exc_data;
+    wire    [ 8:0]  id_esubcode;
     
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
@@ -320,6 +330,18 @@ module ID (
     assign alu_op[12] = inst_mul_w;
     assign alu_op[13] = inst_mulh_w;
     assign alu_op[14] = inst_mulh_wu;
+
+
+// 定义load_op和store_op
+assign id_load_op[0] = inst_ld_b;
+assign id_load_op[1] = inst_ld_h; 
+assign id_load_op[2] = inst_ld_w;
+assign id_load_op[3] = inst_ld_bu;
+assign id_load_op[4] = inst_ld_hu;
+
+assign id_store_op[0] = inst_st_b;
+assign id_store_op[1] = inst_st_h;
+assign id_store_op[2] = inst_st_w;
 
     //除法器调用
     assign id_div_en =  inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
@@ -440,7 +462,10 @@ module ID (
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
         id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
-        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh
+        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_load_op, id_store_op,    // 用于EX阶段ALE检测
+    id_adef, id_wrong_addr,     // ADEF异常信息
+    id_ertn_flush, id_ex,       // 异常控制信号  
+    id_esubcode, id_ecode  
     };
 
     assign id_if_bus = {
@@ -513,10 +538,13 @@ module ID (
                         inst_csrxchg   | inst_ertn    | inst_syscall | inst_break     |
                         inst_rdcntvl   | inst_rdcntvh | inst_rdcntid );
 
+    assign id_ertn_flush = inst_ertn & id_valid;
+
     assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef);
     assign id_ecode = id_has_int   ? `ECODE_INT
                     : id_adef      ? `ECODE_ADE
                     : id_ine       ? `ECODE_INE
                     : inst_break   ? `ECODE_BRK
                     : inst_syscall ? `ECODE_SYS : 6'b0;
+    assign id_esubcode = id_adef ? `ESUBCODE_ADEF : 9'b0;
 endmodule

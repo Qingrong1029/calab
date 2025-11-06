@@ -64,6 +64,7 @@
 `define ECODE_FPD        5'h0F    // 浮点指令未使能例外
 `define ECODE_FPE        5'h12    // 基础浮点指令例外
 `define ECODE_TLBR       5'h3F    // TLB重填例外
+`define ESUBCODE_ADEF    9'h0
 
 // EsubCode 宏定义（针对有子编码的例外）
 `define ESUB_ADE         3'h0     // 取指地址错例外
