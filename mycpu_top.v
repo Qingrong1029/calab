@@ -21,17 +21,17 @@ module mycpu_top(
 );
     wire            id_allowin;
     wire            if_id_valid;
-    wire    [ 63:0] if_id_bus;
+    wire    [ 96:0] if_id_bus;
     wire    [ 32:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [273:0] id_ex_bus;
+    wire    [332:0] id_ex_bus;
     wire    [ 38:0] wb_id_bus;
-    wire    [189:0] ex_mem_bus;
+    wire    [239:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
     wire            mem_wb_valid;
-    wire    [183:0] mem_wb_bus;
+    wire    [231:0] mem_wb_bus;
     wire            wb_allowin;
     wire    [ 53:0] mem_id_bus;
     wire    [ 55:0] ex_id_bus;
@@ -50,12 +50,16 @@ module mycpu_top(
     wire    [31:0]  ertn_entry;
     wire    [5:0]   wb_ecode;
     wire    [8:0]   wb_esubcode;
+    wire    [31:0]  wb_wrong_addr;
     wire    [31:0]  wb_vaddr;
     wire    [31:0]  coreid_in;
     wire            has_int;
     wire    [7:0]   hw_int_in  = 8'b0;
     wire            ipi_int_in = 1'b0;
     wire            mem_ex;
+    wire            mem_ertn;
+    wire            has_int;
+    wire            id_has_int;
     
     IF my_IF (
         .clk                (clk),
@@ -88,6 +92,7 @@ module mycpu_top(
         .mem_id_bus         (mem_id_bus),
         .ex_id_bus          (ex_id_bus),
         .ertn_flush         (ertn_flush),
+        .id_has_int         (has_int),
         .wb_ex              (wb_ex | ertn_flush)
     );
     EX  my_EX (
@@ -107,6 +112,7 @@ module mycpu_top(
         //ertn
         .ertn_flush         (ertn_flush),
         .mem_ex             (mem_ex),
+        .mem_ertn          (mem_ertn),
         .wb_ex              (wb_ex | ertn_flush)
     );
     MEM my_MEM (
@@ -123,6 +129,7 @@ module mycpu_top(
         //ertn
         .ertn_flush        (ertn_flush),
         .mem_ex            (mem_ex),
+        .mem_ertn          (mem_ertn),
         .wb_ex             (wb_ex | ertn_flush)
     );
     WB my_WB (
@@ -147,7 +154,8 @@ module mycpu_top(
         .wb_ex              (wb_ex),
         .wb_csr_pc          (wb_csr_pc),
         .wb_ecode           (wb_ecode),
-        .wb_esubcode        (wb_esubcode)
+        .wb_esubcode        (wb_esubcode),
+        .wb_vaddr           (wb_vaddr)
     );
     csr_reg csr(
         .clk                (clk),
@@ -169,6 +177,7 @@ module mycpu_top(
         .wb_ecode           (wb_ecode),
         .wb_esubcode        (wb_esubcode),
         
+        .has_int            (has_int),
         .hw_int_in          (hw_int_in),
         .ipi_int_in         (ipi_int_in)
         

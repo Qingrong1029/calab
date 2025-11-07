@@ -5,7 +5,7 @@ module IF (
     input           id_allowin,
     
     output          if_id_valid,
-    output  [63:0]  if_id_bus,
+    output  [96:0]  if_id_bus,
     input   [32:0]  id_if_bus,
     input           wb_ex,
     
@@ -28,6 +28,8 @@ module IF (
     wire    [31:0]  if_nextpc;
     wire    [31:0]  br_target;
     wire    [31:0]  seq_pc;
+    wire            if_adef;
+    wire    [31:0]  if_wrong_addr;
 
     assign  if_ready_go = 1'b1;
     assign  if_allowin = ~resetn | if_ready_go & id_allowin |ertn_flush |wb_ex;
@@ -43,14 +45,14 @@ module IF (
         end
     end
     assign  if_id_valid = if_ready_go & if_valid & ~ertn_flush & ~wb_ex; 
-    assign  if_id_bus = { if_pc, if_inst };
+    assign  if_id_bus = {if_adef,if_wrong_addr,if_pc, if_inst};
 
     assign  seq_pc = if_pc + 3'h4;
     assign  { if_br_taken, br_target } = id_if_bus;
     assign  if_nextpc = wb_ex? ex_entry:
-                 if_br_taken ? br_target :
-                 ertn_flush  ? ertn_entry :
-                               seq_pc;
+                 ertn_flush  ? ertn_entry:
+                 if_br_taken ? br_target :seq_pc;
+    assign if_adef = if_nextpc[1] | if_nextpc[0];
 
     always @(posedge clk ) begin
         if(~resetn)begin
@@ -60,6 +62,8 @@ module IF (
             if_pc <= if_nextpc;
         end
     end
+
+    assign  if_wrong_addr = if_nextpc;
     
     assign  inst_sram_en = if_allowin | ertn_flush;
     assign  inst_sram_addr = if_nextpc;

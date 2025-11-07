@@ -6,7 +6,7 @@ module WB (
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [184:0] mem_wb_bus,
+    input   [231:0] mem_wb_bus,
 
     output  [ 38:0] wb_id_bus,
 
@@ -27,11 +27,12 @@ module WB (
     output          wb_ex,
     output  [31:0]  wb_csr_pc,
     output  [ 5:0]  wb_ecode,
-    output  [ 8:0]  wb_esubcode
+    output  [ 8:0]  wb_esubcode,
+    output  [31:0]  wb_vaddr
 );
 
     reg             wb_valid;
-    reg     [183:0] mem_wb_bus_vld;
+    reg     [231:0] mem_wb_bus_vld;
     wire            wb_ready_go;
     wire            wb_gr_we;
     wire            rf_we;
@@ -49,11 +50,23 @@ module WB (
     wire    [31:0]  wb_csr_wmask;
     wire    [31:0]  wb_csr_wvalue;
     wire            wb_ertn;
+
+    wire    [31:0]  wb_wrong_addr;
+    wire     [31:0] wb_vaddr;
+    wire            wb_ex_id;         // 从ID传来的异常
+    wire    [ 8:0]  wb_esubcode;      // 异常子码
+    wire    [ 5:0]  wb_ecode;         // 异常编码
     
     assign wb_ready_go = 1'b1;
     assign wb_allowin = wb_ready_go | ~wb_valid;
     always @(posedge clk ) begin
         if (~resetn) begin
+            wb_valid <= 1'b0;
+        end
+        else if (wb_ex) begin
+            wb_valid <= 1'b0;
+        end
+        else if (ertn_flush) begin
             wb_valid <= 1'b0;
         end
         else if (wb_allowin) begin
@@ -67,17 +80,16 @@ module WB (
     end
     assign  {
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
-        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex
+        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex, wb_wrong_addr, wb_ex_id, wb_esubcode, wb_ecode
     } = mem_wb_bus_vld;
-    assign  rf_we = wb_valid & wb_gr_we;
+    assign  rf_we = wb_valid & wb_gr_we & ~wb_ex;
     assign  rf_waddr = wb_dest; 
     assign  rf_wdata = wb_wdata;
     assign  wb_id_bus = {
         rf_we, rf_waddr, rf_wdata, csr_re
     };
-    assign wb_ex = wb_valid & (wb_syscall_ex);//可以加别的异常
-    assign wb_ecode = wb_syscall_ex ? `ECODE_SYS : 6'b0;
-    assign wb_esubcode = 9'b0;  // syscall没有子编码
+    assign wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
+    assign wb_esubcode = wb_ex_id ? wb_esubcode : 9'b0;  // syscall没有子编码
     assign wb_csr_pc = wb_pc;
     assign ertn_flush = wb_valid & wb_ertn;
     //csr
@@ -87,6 +99,7 @@ module WB (
     assign csr_we = wb_csr_we;
     assign csr_wvalue = wb_csr_wvalue;
     assign csr_wmask = wb_csr_wmask;
+    assign wb_vaddr  = wb_wrong_addr;
 
     assign  debug_wb_pc = wb_pc;
     assign  debug_wb_rf_we = {4{rf_we}};
