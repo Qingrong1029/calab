@@ -58,7 +58,6 @@ module mycpu_top(
     wire            ipi_int_in = 1'b0;
     wire            mem_ex;
     wire            mem_ertn;
-    wire            has_int;
     wire            id_has_int;
     
     IF my_IF (

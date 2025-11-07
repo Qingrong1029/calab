@@ -52,7 +52,6 @@ module MEM (
     wire            mem_ex;
     wire            mem_ale;           // ALE异常
     wire            mem_adef;          // ADEF异常  
-    wire    [31:0]  mem_wrong_addr;    // 错误地址
     wire            mem_ertn_flush;    // ERTN刷新
     wire            mem_ex_id;         // 从ID传来的异常
     wire    [ 8:0]  mem_esubcode;      // 异常子码

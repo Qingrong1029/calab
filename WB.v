@@ -55,6 +55,7 @@ module WB (
     wire     [31:0] wb_vaddr;
     wire            wb_ex_id;         // 从ID传来的异常
     wire    [ 8:0]  wb_esubcode;      // 异常子码
+    wire    [ 8:0]  wb_esubcode_tmp;      // 异常子码
     wire    [ 5:0]  wb_ecode;         // 异常编码
     
     assign wb_ready_go = 1'b1;
@@ -80,7 +81,7 @@ module WB (
     end
     assign  {
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
-        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex, wb_wrong_addr, wb_ex_id, wb_esubcode, wb_ecode
+        wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex, wb_wrong_addr, wb_ex_id, wb_esubcode_tmp, wb_ecode
     } = mem_wb_bus_vld;
     assign  rf_we = wb_valid & wb_gr_we & ~wb_ex;
     assign  rf_waddr = wb_dest; 
@@ -89,7 +90,7 @@ module WB (
         rf_we, rf_waddr, rf_wdata, csr_re
     };
     assign wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
-    assign wb_esubcode = wb_ex_id ? wb_esubcode : 9'b0;  // syscall没有子编码
+    assign wb_esubcode = wb_ex_id ? wb_esubcode_tmp : 9'b0;  // syscall没有子编码
     assign wb_csr_pc = wb_pc;
     assign ertn_flush = wb_valid & wb_ertn;
     //csr

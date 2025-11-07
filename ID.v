@@ -218,7 +218,6 @@ module ID (
 
     //exception exp13
     wire        id_ine;
-    wire        id_adef;
     wire [5:0]  id_ecode;
 
         // 增加load/store操作类型，用于EX阶段ALE检测
