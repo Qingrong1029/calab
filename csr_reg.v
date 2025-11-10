@@ -221,6 +221,12 @@ module csr_reg (
     end
     
     // ---------- TVAL.TimeVal----------
+    reg csr_tcfg_en;
+    reg csr_tcfg_periodic;
+    reg [29:0] csr_tcfg_initval;
+    wire [31:0] tcfg_next_value;
+    wire [31:0] csr_tval;
+    reg [31:0] timer_cnt;
     assign tcfg_next_value = csr_wmask[31:0]&csr_wvalue[31:0]
                           | ~csr_wmask[31:0]&{csr_tcfg_initval,
                                               csr_tcfg_periodic, csr_tcfg_en};
