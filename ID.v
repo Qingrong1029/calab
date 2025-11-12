@@ -187,7 +187,7 @@ module ID (
     wire        inst_rdcntvl;
     wire        inst_rdcntvh;
     
-    wire        inst_b;
+    wire        is_b;
 
     wire        need_ui5;
     wire        need_si12;
@@ -449,8 +449,8 @@ module ID (
 
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
-    assign inst_b = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_bl | inst_jirl | inst_b;
-    assign br_stall = ex_ld & inst_b &
+    assign is_b = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_bl | inst_jirl | inst_b;
+    assign br_stall = ex_ld & is_b &
                     ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                      (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0));
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;

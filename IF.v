@@ -94,8 +94,8 @@ module IF (
     
     assign  cancel_req = wb_ex | ertn_flush | if_br_taken;
 
-    assign  if_ready_go = (inst_sram_data_ok & ~discard_next_data) | inst_buffer_valid;
-    assign  if_allowin = ~resetn | (if_ready_go & id_allowin) | cancel_req;
+    assign  if_ready_go = (inst_sram_data_ok | inst_buffer_valid ) & ~discard_next_data;
+    assign  if_allowin = ~resetn | (if_ready_go & id_allowin) | cancel_req | ~if_valid;
   always @(posedge clk) begin
         if(~resetn) begin
             if_valid <= 1'b0;
