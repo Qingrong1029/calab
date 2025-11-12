@@ -47,8 +47,9 @@ module EX (
     wire    [  2:0] mem_type;
     wire            ex_syscall_ex;
     wire            ex_ale;           // ALE异常信号
-    wire    [ 4:0]  ex_load_op;       // 需要从ID阶段传递过来
-    wire    [ 2:0]  ex_store_op;  
+    wire    [  4:0] ex_load_op;       // 需要从ID阶段传递过来
+    wire    [  2:0] ex_store_op;
+    wire    [ 31:0] alu_result;
     
 
     // 增加ALE检测逻辑
@@ -60,7 +61,8 @@ module EX (
             | ex_store_op[2] & (alu_result[1] | alu_result[0]);    // st_w地址错
 
     //block
-    assign  ex_ready_go = (ex_div_en) ? div_done : 1'b1;
+    assign  ex_ready_go = (~(~data_sram_req | data_sram_req & data_sram_addr_ok))? 1'b0:
+                                                                     (ex_div_en) ? div_done : 1'b1;
     assign  ex_mem_valid = ex_ready_go & ex_valid;
     assign  ex_allowin = ex_mem_valid & mem_allowin | ~ex_valid;
     always @(posedge clk ) begin
@@ -183,7 +185,7 @@ module EX (
     assign final_ecode = ex_ale ? `ECODE_ALE : ex_ecode;
     assign final_ex = ex_ex | ex_ale;  // ALE或其他异常
 
-// 修改ALE检测，确保只在有效操作时检测
+    // 修改ALE检测，确保只在有效操作时检测
     assign ex_ale = (ld_ale | st_ale) & ex_valid & (|ex_load_op | |ex_store_op);
     assign ex_bypass = ex_valid & ex_gr_we& ~final_ex;
     assign ex_ld = ex_valid & res_from_mem;
