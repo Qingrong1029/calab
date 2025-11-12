@@ -24,11 +24,9 @@ module IF (
     input   [31:0]  ertn_entry
 );
     reg             if_valid;
-    reg             to_if_valid;
     wire            if_ready_go;
     wire            pre_if_ready_go;
     wire            if_allowin;
-    wire            if_to_pre_if_allowin;
     wire            if_br_taken;
     wire            br_stall;
     reg     [31:0]  if_pc;
@@ -100,11 +98,11 @@ module IF (
         if(~resetn) begin
             if_valid <= 1'b0;
         end
-        else if (cancel_req) begin
-            if_valid <= 1'b0;
-        end
         else if (if_allowin) begin
             if_valid <= pre_if_ready_go;
+        end
+        else if (cancel_req) begin
+            if_valid <= 1'b0;
         end
     end
     assign  if_id_valid =  if_valid && if_ready_go && ~cancel_req;
