@@ -7,7 +7,7 @@ module ID (
     input           if_id_valid,
     output          id_allowin,
     input   [96:0]  if_id_bus,
-    output  [32:0]  id_if_bus,
+    output  [33:0]  id_if_bus,
 
     input           ex_allowin,
     output          id_ex_valid,
@@ -25,6 +25,7 @@ module ID (
     wire    [31:0]  id_inst;
     wire    [31:0]  id_pc;
     wire            br_taken;
+    wire            br_stall;
     wire    [31:0]  br_target;
     reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
@@ -185,6 +186,8 @@ module ID (
     wire        inst_rdcntid;
     wire        inst_rdcntvl;
     wire        inst_rdcntvh;
+    
+    wire        inst_b;
 
     wire        need_ui5;
     wire        need_si12;
@@ -218,13 +221,12 @@ module ID (
 
     //exception exp13
     wire        id_ine;
-    wire        id_adef;
     wire [5:0]  id_ecode;
 
         // 增加load/store操作类型，用于EX阶段ALE检测
-    wire    [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
-    wire    [2:0]  id_store_op;  // st_b, st_h, st_w
-    wire    [ 8:0]  id_esubcode;
+    wire [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
+    wire [2:0]  id_store_op;  // st_b, st_h, st_w
+    wire [8:0]  id_esubcode;
     
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
@@ -331,16 +333,16 @@ module ID (
     assign alu_op[14] = inst_mulh_wu;
 
 
-// 定义load_op和store_op
-assign id_load_op[0] = inst_ld_b;
-assign id_load_op[1] = inst_ld_h; 
-assign id_load_op[2] = inst_ld_w;
-assign id_load_op[3] = inst_ld_bu;
-assign id_load_op[4] = inst_ld_hu;
-
-assign id_store_op[0] = inst_st_b;
-assign id_store_op[1] = inst_st_h;
-assign id_store_op[2] = inst_st_w;
+    // 定义load_op和store_op
+    assign id_load_op[0] = inst_ld_b;
+    assign id_load_op[1] = inst_ld_h; 
+    assign id_load_op[2] = inst_ld_w;
+    assign id_load_op[3] = inst_ld_bu;
+    assign id_load_op[4] = inst_ld_hu;
+    
+    assign id_store_op[0] = inst_st_b;
+    assign id_store_op[1] = inst_st_h;
+    assign id_store_op[2] = inst_st_w;
 
     //除法器调用
     assign id_div_en =  inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
@@ -447,6 +449,8 @@ assign id_store_op[2] = inst_st_w;
 
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
+    assign inst_b = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_bl | inst_jirl | inst_b;
+    assign br_stall = !id_ready_go && inst_b;
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
@@ -485,7 +489,7 @@ assign id_store_op[2] = inst_st_w;
             (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)) ||
             (wb_csr  & rf_we     & (rf_waddr    == id_csr_num));
 
-   assign block_not = (csr_unblock || 
+    assign block_not = (csr_unblock || 
                    // 情况1: CSR读写操作的数据前推
                    ((id_csr_re | id_csr_we) & (rf_waddr != 0) &
                     (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |

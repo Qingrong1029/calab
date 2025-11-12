@@ -12,10 +12,13 @@ module EX (
     input           wb_ex,
     output  [239:0] ex_mem_bus,
 
-    output          data_sram_en,
-    output  [ 3:0]  data_sram_we,
+    output          data_sram_req,
+    output          data_sram_wr,
+    output  [ 1:0]  data_sram_size,
+    output  [ 3:0]  data_sram_wstrb,
     output  [31:0]  data_sram_addr,
     output  [31:0]  data_sram_wdata,
+    input           data_sram_addr_ok,
 
     output  [55:0]  ex_id_bus,
     //ertn
@@ -35,7 +38,6 @@ module EX (
     end
     
     reg             ex_valid;
-    wire            wb_ex;
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
@@ -108,6 +110,8 @@ module EX (
     wire            ex_ex;            // 异常信号
     wire    [ 8:0]  ex_esubcode;      // 异常子码
     wire    [ 5:0]  ex_ecode;         // 异常编码
+    wire    [5:0]   final_ecode;
+    wire            final_ex;
     
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
@@ -152,9 +156,10 @@ module EX (
                      inst_st_h ? {2{rkd_value[15:0]}} :
                                     rkd_value[31:0];
     
-    assign data_sram_en = ((|ex_load_op) | (|ex_store_op)) & ex_valid & 
+    assign data_sram_req = ((|ex_load_op) | (|ex_store_op)) & ex_valid & mem_allowin &
                      ~ex_ale & ~wb_ex & ~ertn_flush & ~mem_ex & ~mem_ertn & ~final_ex & ~ex_ertn;
-    assign  data_sram_we = (~wb_ex & ~ertn_flush & ~mem_ex&~ex_ale) ? (
+    assign data_sram_wr = (|data_sram_wstrb) & ex_valid & ~wb_ex & ~mem_ex & ~final_ex;
+    assign data_sram_wstrb = (~wb_ex & ~ertn_flush & ~mem_ex & ~ex_ale & ~mem_ertn & ~final_ex & ~ex_ertn) ? (
                     inst_st_b ? (
                         mem_addr_low2 == 2'b00 ? 4'b0001 :
                         mem_addr_low2 == 2'b01 ? 4'b0010 :
@@ -165,6 +170,7 @@ module EX (
                                                  4'b1100
                     ) : inst_st_w ? 4'b1111 : 4'b0000
                 ) : 4'b0000;  // ERTN flush 时禁止写
+    assign  data_sram_size = inst_st_h ? 2'h1 : inst_st_w ? 2'h2 : 2'h0;
     assign  data_sram_addr = {alu_result[31:2],2'b00};
     assign  data_sram_wdata = st_data;
     assign ex_mem_bus = {
@@ -174,8 +180,8 @@ module EX (
     };
 
     // 添加异常优先级处理逻辑
-    wire [5:0] final_ecode = ex_ale ? `ECODE_ALE : ex_ecode;
-    wire final_ex = ex_ex | ex_ale;  // ALE或其他异常
+    assign final_ecode = ex_ale ? `ECODE_ALE : ex_ecode;
+    assign final_ex = ex_ex | ex_ale;  // ALE或其他异常
 
 // 修改ALE检测，确保只在有效操作时检测
     assign ex_ale = (ld_ale | st_ale) & ex_valid & (|ex_load_op | |ex_store_op);

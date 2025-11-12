@@ -10,7 +10,8 @@ module MEM (
     input           wb_allowin,
     output  [231:0] mem_wb_bus,
 
-    input   [ 31:0] data_sram_rdata,
+    input           data_sram_data_ok,
+    input   [31:0]  data_sram_rdata,
     input           wb_ex,
   
 
@@ -21,7 +22,6 @@ module MEM (
 );
 
     reg             mem_valid;
-    wire            wb_ex;
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
@@ -46,17 +46,15 @@ module MEM (
     wire    [13:0]  mem_csr_num;
     wire    [31:0]  mem_csr_wmask;
     wire    [31:0]  mem_csr_wvalue;
-    wire            mem_ertn;
-    wire            ertn_flush;
     wire            mem_syscall_ex;
-    wire            mem_ex;
     wire            mem_ale;           // ALE异常
     wire            mem_adef;          // ADEF异常  
-    wire    [31:0]  mem_wrong_addr;    // 错误地址
     wire            mem_ertn_flush;    // ERTN刷新
     wire            mem_ex_id;         // 从ID传来的异常
     wire    [ 8:0]  mem_esubcode;      // 异常子码
     wire    [ 5:0]  mem_ecode;         // 异常编码
+    
+    reg             data_ok_reg;
     
     assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
 
@@ -79,8 +77,23 @@ module MEM (
                        (mem_type == 3'b010) ? sign_extended_byte :  // ld.b: 字节符号扩展
                        (mem_type == 3'b101) ? zero_extended_half :  // ld.hu: 半字零扩展
                        zero_extended_byte;  // ld.bu: 字节零扩展
+                       
+    always @(posedge clk) begin
+        if (~resetn)
+            data_ok_reg <= 1'b0;
+        else if (wb_ex || ertn_flush) 
+            data_ok_reg <= 1'b0;
+        else if (mem_valid && res_from_mem) begin
+            if (data_sram_data_ok)
+                data_ok_reg <= 1'b1;
+            else if (mem_allowin)
+                data_ok_reg <= 1'b0;
+        end
+    else
+        data_ok_reg <= 1'b1;
+end
 
-    assign  mem_ready_go = 1'b1;
+    assign  mem_ready_go = (mem_valid && res_from_mem) ? data_ok_reg : 1'b1;
     assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex & ~ertn_flush;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
