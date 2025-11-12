@@ -450,7 +450,9 @@ module ID (
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
     assign inst_b = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_bl | inst_jirl | inst_b;
-    assign br_stall = !id_ready_go && inst_b;
+    assign br_stall = ex_ld & inst_b &
+                    ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                     (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0));
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
@@ -469,7 +471,7 @@ module ID (
     };
 
     assign id_if_bus = {
-        br_taken & id_ready_go , br_target
+        br_taken & id_ready_go , br_target , br_stall
     };
     
     //csr_block

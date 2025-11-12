@@ -49,7 +49,7 @@ module IF (
     wire            cancel_req;
     reg             req_accepted;
     reg     [31:0]  accepted_addr;
-    reg      [31:0] inst_buffer;
+    reg     [31:0]  inst_buffer;
     reg             inst_buffer_valid;
     reg             discard_next_data;
     
@@ -84,7 +84,7 @@ module IF (
     end
     
     assign  seq_pc = if_pc + 3'h4;
-    assign  { if_br_taken, br_target, if_br_stall } = id_if_bus;
+    assign  { if_br_taken, br_target, br_stall } = id_if_bus;
     assign  if_nextpc =  wb_ex_reg       ? ex_entry_reg  : 
                          wb_ex           ? ex_entry      :
                          ertn_flush_reg  ? ertn_entry_reg: 
@@ -95,7 +95,7 @@ module IF (
     assign  cancel_req = wb_ex | ertn_flush | if_br_taken;
 
     assign  if_ready_go = (inst_sram_data_ok & ~discard_next_data) | inst_buffer_valid;
-    assign  if_allowin = ~if_valid | (if_ready_go & id_allowin) | cancel_req;
+    assign  if_allowin = ~resetn | (if_ready_go & id_allowin) | cancel_req;
   always @(posedge clk) begin
         if(~resetn) begin
             if_valid <= 1'b0;
