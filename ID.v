@@ -52,8 +52,8 @@ module ID (
     wire    [13:0]  ex_csr_num;
     wire    [13:0]  mem_csr_num;
     
-    assign mem_type = inst_ld_w  ? 3'b000 :  // word
-                      inst_st_w  ? 3'b000 :  // word
+    assign mem_type = inst_ld_w  ? 3'b111 :  // word
+                      inst_st_w  ? 3'b111 :  // word
                       inst_ld_h  ? 3'b001 :  // halfword
                       inst_st_h  ? 3'b001 :  // halfword
                       inst_ld_hu ? 3'b101 :  // halfword unsigned
@@ -223,7 +223,7 @@ module ID (
     wire        id_ine;
     wire [5:0]  id_ecode;
 
-        // 增加load/store操作类型，用于EX阶段ALE检测
+    // 增加load/store操作类型，用于EX阶段ALE检测
     wire [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
     wire [2:0]  id_store_op;  // st_b, st_h, st_w
     wire [8:0]  id_esubcode;
