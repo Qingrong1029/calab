@@ -94,7 +94,7 @@ module IF (
 
     assign  if_ready_go = (inst_sram_data_ok | inst_buffer_valid ) & ~discard_next_data;
     assign  if_allowin = ~resetn | (if_ready_go & id_allowin) | cancel_req | ~if_valid;
-    always @(posedge clk) begin
+  always @(posedge clk) begin
         if(~resetn) begin
             if_valid <= 1'b0;
         end

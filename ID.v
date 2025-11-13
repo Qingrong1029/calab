@@ -223,7 +223,7 @@ module ID (
     wire        id_ine;
     wire [5:0]  id_ecode;
 
-    // 增加load/store操作类型，用于EX阶段ALE检测
+        // 增加load/store操作类型，用于EX阶段ALE检测
     wire [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
     wire [2:0]  id_store_op;  // st_b, st_h, st_w
     wire [8:0]  id_esubcode;
@@ -486,8 +486,8 @@ module ID (
                     || (wb_csr & (rf_we &((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
                                        || (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
 
+    wire csr_unblock;
     assign csr_unblock = 
-            (ex_csr  & ex_gr_we  & (ex_csr_num  == id_csr_num)) ||
             (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)) ||
             (wb_csr  & rf_we     & (rf_waddr    == id_csr_num));
 
@@ -502,8 +502,6 @@ module ID (
                      need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))))&csr_block;
     
     reg block_not_prev;  // 记录上一拍的block_not状态
-    
-    wire csr_unblock;
 
     always @(posedge clk) begin
         if (~resetn) begin
@@ -512,6 +510,7 @@ module ID (
             block_not_prev <= block_not;
         end
     end
+    
     assign id_ready_go =  (ertn_flush | wb_ex) ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
