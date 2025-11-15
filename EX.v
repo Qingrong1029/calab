@@ -37,7 +37,7 @@ module EX (
         else
             cnt_value <= cnt_value + 1'b1;  // 每周期自增
     end
-    
+     
     reg             ex_valid;
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
@@ -51,8 +51,7 @@ module EX (
     wire    [  4:0] ex_load_op;       // 需要从ID阶段传递过来
     wire    [  2:0] ex_store_op;
     wire    [ 31:0] alu_result;
-    wire            reg_ex;
-    
+    wire            ex_div_en;  
 
     // 增加ALE检测逻辑
     wire ld_ale = ex_load_op[1] & alu_result[0]                        // ld_h地址错
@@ -87,7 +86,7 @@ module EX (
     wire            ex_gr_we;
     wire            res_from_mem;
     wire    [14:0]  alu_op;
-    wire            ex_div_en;
+
     wire    [ 2:0]  ex_div_op;
     wire    [31:0]  alu_src1;
     wire    [31:0]  alu_src2;
@@ -123,7 +122,6 @@ module EX (
         ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
     } = id_ex_bus_vld;
 
-    wire    [31:0]  alu_result;
     alu my_alu (    
         .alu_op(alu_op),
         .alu_src1(alu_src1),
@@ -180,7 +178,7 @@ module EX (
             ex_reg   <= 1'b0;
             ertn_reg <= 1'b0;
         end 
-        else if (wb_ex) begin
+        else if (wb_ex | ex_ale) begin
             ex_reg <= 1'b1;
         end 
         else if (ertn_flush) begin

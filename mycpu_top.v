@@ -80,6 +80,7 @@ module mycpu_top(
         .inst_sram_wr       (inst_sram_wr),
         .inst_sram_size     (inst_sram_size),
         .inst_sram_wstrb    (inst_sram_wstrb),
+        .inst_sram_wdata    (inst_sram_wdata),
         .inst_sram_addr     (inst_sram_addr),
         .inst_sram_addr_ok  (inst_sram_addr_ok),
         .inst_sram_data_ok  (inst_sram_data_ok),

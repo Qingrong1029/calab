@@ -373,7 +373,7 @@ module ID (
 
     assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_csrrd | inst_csrwr | inst_csrxchg;
+    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu  | inst_csrwr | inst_csrxchg;
 
     assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -423,12 +423,12 @@ module ID (
         .wdata  (rf_wdata )
         );
 
-    assign rj_value  = (ex_bypass  & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
-    assign rkd_value = (ex_bypass  & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
+    assign rj_value  = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
+    assign rkd_value = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
     assign rj_lt_rd_signed   = $signed(rj_value) < $signed(rkd_value);
     assign rj_ge_rd_signed   = $signed(rj_value) >= $signed(rkd_value);
     assign rj_lt_rd_unsigned = rj_value < rkd_value;  // 无符号比较就是直接比较
@@ -521,7 +521,7 @@ module ID (
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
                           inst_xor | inst_st_w | inst_st_b | inst_st_h |
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
-                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrrd | inst_csrwr | inst_csrxchg;
+                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrwr | inst_csrxchg;
 
     //指令不存在
     assign id_ine = ~ ( inst_add_w     | inst_sub_w   | inst_slt     | inst_sltu      |

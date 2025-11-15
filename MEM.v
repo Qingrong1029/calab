@@ -89,8 +89,8 @@ module MEM (
 
     wire [31:0] mem_rdata = mem_data_buffer_valid ? mem_data_buffer : data_sram_rdata;
     
-    assign  mem_ready_go =  |mem_type ? 
-                         ((data_sram_data_ok | mem_data_buffer_valid) && !discard_next_data | reg_ex) : 1'b1;
+    assign  mem_ready_go = |mem_type ? 
+                         (((data_sram_data_ok | mem_data_buffer_valid) && !discard_next_data) | reg_ex) : 1'b1;
     assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex & ~ertn_flush;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
@@ -138,13 +138,15 @@ module MEM (
 
     assign {
         mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex_id, mem_esubcode, mem_ecode
+        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,
+        mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex_id, mem_esubcode, mem_ecode
     } = ex_mem_bus_vld;
     assign  final_result = res_from_mem ? extended_data : alu_result;
     assign  mem_ex= mem_valid & mem_ex_id;
     assign  mem_wb_bus = {
         mem_gr_we, mem_pc, mem_inst, final_result, mem_dest,
-        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn, mem_syscall_ex, mem_wrong_addr,mem_ex, mem_esubcode, mem_ecode
+        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn, mem_syscall_ex, 
+        mem_wrong_addr,mem_ex, mem_esubcode, mem_ecode
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
     
