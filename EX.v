@@ -222,5 +222,5 @@ module EX (
     assign ex_bypass = ex_valid & ex_gr_we& ~final_ex;
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
-    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr_re , ex_csr_num};
+    assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr_re & ex_valid, ex_csr_num};
 endmodule
