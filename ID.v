@@ -52,8 +52,8 @@ module ID (
     wire    [13:0]  ex_csr_num;
     wire    [13:0]  mem_csr_num;
     
-    assign mem_type = inst_ld_w  ? 3'b000 :  // word
-                      inst_st_w  ? 3'b000 :  // word
+    assign mem_type = inst_ld_w  ? 3'b111 :  // word
+                      inst_st_w  ? 3'b111 :  // word
                       inst_ld_h  ? 3'b001 :  // halfword
                       inst_st_h  ? 3'b001 :  // halfword
                       inst_ld_hu ? 3'b101 :  // halfword unsigned
@@ -373,7 +373,7 @@ module ID (
 
     assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_csrrd | inst_csrwr | inst_csrxchg;
+    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu  | inst_csrwr | inst_csrxchg;
 
     assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -423,12 +423,12 @@ module ID (
         .wdata  (rf_wdata )
         );
 
-    assign rj_value  = (ex_bypass  & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
-    assign rkd_value = (ex_bypass  & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
+    assign rj_value  = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
+    assign rkd_value = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
     assign rj_lt_rd_signed   = $signed(rj_value) < $signed(rkd_value);
     assign rj_ge_rd_signed   = $signed(rj_value) >= $signed(rkd_value);
     assign rj_lt_rd_unsigned = rj_value < rkd_value;  // 无符号比较就是直接比较
@@ -476,47 +476,18 @@ module ID (
     
     //csr_block
     wire csr_block;
-    assign csr_block = ((id_csr_re|id_csr_we)&
-                      ((ex_csr  & ex_gr_we  & (ex_csr_num == id_csr_num))
-                    || (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)))
-                    || (ex_csr  & (ex_gr_we & ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                                            || (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
-                    || (mem_csr & (mem_gr_we &((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                                             || (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))))
-                    || (wb_csr & (rf_we &((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0)
-                                       || (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))));
-
-    assign csr_unblock = 
-            (ex_csr  & ex_gr_we  & (ex_csr_num  == id_csr_num)) ||
-            (mem_csr & mem_gr_we & (mem_csr_num == id_csr_num)) ||
-            (wb_csr  & rf_we     & (rf_waddr    == id_csr_num));
-
-    assign block_not = (csr_unblock || 
-                   // 情况1: CSR读写操作的数据前推
-                   ((id_csr_re | id_csr_we) & (rf_waddr != 0) &
-                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
-                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))) ||
-                   // 情况2: 写回阶段的CSR数据前推  
-                   (rf_we & wb_csr & (rf_waddr != 0) &
-                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
-                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))))&csr_block;
+    assign csr_block =(ex_csr & 
+                         ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))|
+                      (mem_csr & 
+                         ((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                          (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)));
     
-    reg block_not_prev;  // 记录上一拍的block_not状态
-    
-    wire csr_unblock;
-
-    always @(posedge clk) begin
-        if (~resetn) begin
-            block_not_prev <= 1'b0;
-        end else begin
-            block_not_prev <= block_not;
-        end
-    end
     assign id_ready_go =  (ertn_flush | wb_ex) ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy | csr_block)|block_not_prev;  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy | csr_block);
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |
@@ -527,7 +498,7 @@ module ID (
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
                           inst_xor | inst_st_w | inst_st_b | inst_st_h |
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
-                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrrd | inst_csrwr | inst_csrxchg;
+                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrwr | inst_csrxchg;
 
     //指令不存在
     assign id_ine = ~ ( inst_add_w     | inst_sub_w   | inst_slt     | inst_sltu      |

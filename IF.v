@@ -124,10 +124,8 @@ module IF (
         if (~resetn) begin
             discard_next_data <= 1'b0;
         end
-        else if (cancel_req) begin
-            if (req_accepted || (if_valid && !if_ready_go)) begin
-                discard_next_data <= 1'b1;
-            end
+        else if (cancel_req && if_valid && !if_ready_go) begin
+            discard_next_data <= 1'b1;
         end
         else if (inst_sram_data_ok && discard_next_data) begin
             discard_next_data <= 1'b0;

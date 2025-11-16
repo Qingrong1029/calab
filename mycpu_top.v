@@ -67,6 +67,7 @@ module mycpu_top(
     wire            mem_ex;
     wire            mem_ertn;
     wire            id_has_int;
+    wire            reg_ex;
     
     IF my_IF (
         .clk                (clk),
@@ -79,6 +80,7 @@ module mycpu_top(
         .inst_sram_wr       (inst_sram_wr),
         .inst_sram_size     (inst_sram_size),
         .inst_sram_wstrb    (inst_sram_wstrb),
+        .inst_sram_wdata    (inst_sram_wdata),
         .inst_sram_addr     (inst_sram_addr),
         .inst_sram_addr_ok  (inst_sram_addr_ok),
         .inst_sram_data_ok  (inst_sram_data_ok),
@@ -126,7 +128,8 @@ module mycpu_top(
         .ertn_flush         (ertn_flush),
         .mem_ex             (mem_ex),
         .mem_ertn           (mem_ertn),
-        .wb_ex              (wb_ex | ertn_flush)
+        .wb_ex              (wb_ex | ertn_flush),
+        .reg_ex             (reg_ex)
     );
     MEM my_MEM (
         .clk                (clk),
@@ -145,7 +148,8 @@ module mycpu_top(
         .ertn_flush         (ertn_flush),
         .mem_ex             (mem_ex),
         .mem_ertn           (mem_ertn),
-        .wb_ex              (wb_ex | ertn_flush)
+        .wb_ex              (wb_ex | ertn_flush),
+        .reg_ex             (reg_ex)
     );
     WB my_WB (
         .clk                (clk),
