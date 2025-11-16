@@ -119,7 +119,8 @@ module EX (
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
+        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
+        ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
     } = id_ex_bus_vld;
 
     alu my_alu (    
@@ -178,7 +179,7 @@ module EX (
             ex_reg   <= 1'b0;
             ertn_reg <= 1'b0;
         end 
-        else if (wb_ex | ex_ale) begin
+        else if (wb_ex) begin
             ex_reg <= 1'b1;
         end 
         else if (ertn_flush) begin
@@ -191,7 +192,7 @@ module EX (
     end
     
     assign data_sram_req = ((|ex_load_op) | (|ex_store_op)) & ex_valid & mem_allowin &
-                     ~ex_ale & ~wb_ex & ~ertn_flush & ~reg_ex & ~addr_ok_reg;
+                    ~wb_ex & ~ertn_flush & ~reg_ex & ~addr_ok_reg;
     assign data_sram_wr = (|data_sram_wstrb) & ex_valid & ~wb_ex & ~mem_ex & ~final_ex;
     assign data_sram_wstrb = (~wb_ex & ~ertn_flush & ~mem_ex & ~ex_ale & ~mem_ertn & ~final_ex & ~ex_ertn) ? (
                     inst_st_b ? (
