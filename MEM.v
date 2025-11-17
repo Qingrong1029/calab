@@ -16,6 +16,7 @@ module MEM (
 
     output  [ 53:0] mem_id_bus,
     output          mem_ex,
+    output          mem_ertn,
     input           ertn_flush
 );
 
