@@ -48,7 +48,7 @@ module csr_reg (
     reg [12:0] csr_ecfg_lie;
 
     // ESTAT
-    reg [11:0] csr_estat_is;
+    reg [12:0] csr_estat_is;
     reg [5:0]  csr_estat_ecode;
     reg [8:0]  csr_estat_esubcode;
 
@@ -249,7 +249,7 @@ module csr_reg (
                                     csr_crmd_da, csr_crmd_ie, csr_crmd_plv};
     wire [31:0] csr_prmd_rvalue  = {29'b0, csr_prmd_pie, csr_prmd_pplv};
     wire [31:0] csr_ecfg_rvalue  = {19'b0, csr_ecfg_lie};
-    wire [31:0] csr_estat_rvalue = {csr_estat_esubcode, csr_estat_ecode, 4'b0, csr_estat_is};
+    wire [31:0] csr_estat_rvalue = {1'b0, csr_estat_esubcode, csr_estat_ecode, 3'b0, csr_estat_is};
     wire [31:0] csr_era_rvalue   = csr_era_pc;
     wire [31:0] csr_badv_rvalue  = csr_badv_vaddr;
     wire [31:0] csr_eentry_rvalue= {csr_eentry_va, 6'b0};
