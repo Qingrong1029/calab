@@ -1,4 +1,4 @@
- transfer_axi_bridge
+module transfer_axi_bridge(
     input wire         clk    ,
     input wire         resetn ,
  
@@ -69,7 +69,7 @@
     output wire   [31:0] data_sram_rdata  ,
     output wire          data_sram_addr_ok,
     output wire          data_sram_data_ok
-;
+);
     // ar
     reg  [3:0] arid_reg;
     reg [31:0] araddr_reg;
@@ -157,7 +157,7 @@
 
     // FSM state transition
     always @(posedge clk) begin
-        if(reset) begin
+        if(!resetn) begin
             rreq_cur_state  <= READ_REQ_RST;
             rdata_cur_state <= READ_DATA_RST;
             wrd_cur_state   <= WRITE_RST;
@@ -489,4 +489,4 @@
     end
 
 
-
+endmodule
