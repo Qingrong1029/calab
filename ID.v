@@ -15,7 +15,7 @@ module ID (
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
-    input   [ 53:0] mem_id_bus,
+    input   [ 54:0] mem_id_bus,
     input   [ 55:0] ex_id_bus,
     input           ertn_flush,
     input           id_has_int
@@ -39,6 +39,7 @@ module ID (
     wire            need_addr2;
     wire            ex_bypass;
     wire            ex_ld;
+    wire            mem_ld;
     wire            mem_bypass;
     wire    [31:0]  ex_wdata;
     wire    [31:0]  mem_wdata;
@@ -63,7 +64,7 @@ module ID (
                       3'b000;
     
     assign { ex_bypass , ex_ld , ex_dest , ex_wdata, ex_div_busy, ex_gr_we, ex_csr, ex_csr_num} =  ex_id_bus;
-    assign { mem_bypass , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
+    assign { mem_bypass , mem_ld , mem_dest , mem_wdata, mem_gr_we, mem_csr ,mem_csr_num} = mem_id_bus;
     
     assign id_ex_valid = id_ready_go & id_valid & ~ertn_flush & ~wb_ex;
     assign id_allowin = id_ex_valid & ex_allowin | ~id_valid | ertn_flush;
@@ -423,12 +424,12 @@ module ID (
         .wdata  (rf_wdata )
         );
 
-    assign rj_value  = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
-                       (mem_bypass & id_valid & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
-                       (rf_we      & id_valid & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
-    assign rkd_value = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
-                       (mem_bypass & id_valid & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
-                       (rf_we      & id_valid & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
+    assign rj_value  = (ex_bypass  & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
+                       (mem_bypass & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
+                       (rf_we      & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
+    assign rkd_value = (ex_bypass  & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
+                       (mem_bypass & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
+                       (rf_we      & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
     assign rj_lt_rd_signed   = $signed(rj_value) < $signed(rkd_value);
     assign rj_ge_rd_signed   = $signed(rj_value) >= $signed(rkd_value);
     assign rj_lt_rd_unsigned = rj_value < rkd_value;  // 无符号比较就是直接比较
@@ -486,7 +487,10 @@ module ID (
     assign id_ready_go =  (ertn_flush | wb_ex) ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
+                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))|
+                          (mem_ld & 
+                         ((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                          (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
                          | ex_div_busy | csr_block);
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
