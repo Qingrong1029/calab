@@ -45,7 +45,7 @@ module mycpu_top(
     // b
     input  wire [ 3:0] bid    , 
     input  wire [ 1:0] bresp  , 
-    input  wire       bvalid , 
+    input  wire       bvalid  , 
     output wire        bready , 
 
     // trace debug interface
