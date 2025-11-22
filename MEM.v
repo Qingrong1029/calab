@@ -15,7 +15,7 @@ module MEM (
     input           wb_ex,
   
 
-    output  [ 53:0] mem_id_bus,
+    output  [ 54:0] mem_id_bus,
     output          mem_ex,
     output          mem_ertn,
     input           ertn_flush,
@@ -150,5 +150,5 @@ module MEM (
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
     
-    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr_re & mem_valid, mem_csr_num};
+    assign  mem_id_bus = {mem_bypass , res_from_mem & mem_valid , mem_dest , final_result , mem_gr_we, mem_csr_re & mem_valid, mem_csr_num};
 endmodule

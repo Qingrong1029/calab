@@ -41,7 +41,7 @@ module mycpu_sram(
     wire            mem_wb_valid;
     wire    [231:0] mem_wb_bus;
     wire            wb_allowin;
-    wire    [ 53:0] mem_id_bus;
+    wire    [ 54:0] mem_id_bus;
     wire    [ 55:0] ex_id_bus;
     
     wire    [13:0]  csr_num;

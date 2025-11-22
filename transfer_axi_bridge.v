@@ -1,6 +1,21 @@
-module transfer_axi_bridge(
-    input wire         clk    ,
-    input wire         resetn ,
+`define RREQ_WAIT 5'b00001
+`define RREQ_INST 5'b00010
+`define RREQ_TRAW 5'b00100
+`define RREQ_DATA 5'b01000
+`define RREQ_END  5'b10000
+`define RVAL_WAIT 3'b001
+`define RVAL_DATA 3'b010
+`define RVAL_END  3'b100
+`define WREQ_WAIT 4'b0001
+`define WREQ_TRAW 4'b0010
+`define WREQ_DATA 4'b0100
+`define WREQ_END  4'b1000
+`define WRSP_WAIT 3'b001
+`define WRSP_BEGN 3'b010
+`define WRSP_END  3'b100
+module transfer_axi_bridge (
+    input wire         aclk    ,
+    input wire         aresetn ,
  
     // ar 
     output wire    [ 3:0] arid   ,
@@ -49,7 +64,7 @@ module transfer_axi_bridge(
     output wire          bready, 
 
     // inst sram interface    
-    input  wire          inst_sram_en    ,
+    input  wire          inst_sram_req   ,
     input  wire          inst_sram_wr     ,
     input  wire   [ 1:0] inst_sram_size   ,
     input  wire   [ 3:0] inst_sram_wstrb  ,
@@ -60,7 +75,7 @@ module transfer_axi_bridge(
     output wire          inst_sram_data_ok,
     
     // data sram interface
-    input  wire          data_sram_en    ,
+    input  wire          data_sram_req   ,
     input  wire          data_sram_wr     ,
     input  wire   [ 3:0] data_sram_wstrb  ,
     input  wire   [ 1:0] data_sram_size   , 
@@ -70,429 +85,371 @@ module transfer_axi_bridge(
     output wire          data_sram_addr_ok,
     output wire          data_sram_data_ok
 );
-    // ar
-    reg  [3:0] arid_reg;
-    reg [31:0] araddr_reg;
-    reg  [2:0] arsize_reg;
-    reg        arvalid_reg;   
-    // aw
-    reg [31:0] awaddr_reg;
-    reg [2:0]  awsize_reg;
-    reg        awvalid_reg;  
-    // w
-    reg [31:0] wdata_reg;
-    reg [3:0]  wstrb_reg;
-    reg        wvalid_reg;
-    //b
-    reg bready_reg;
-
-
-    // ar
-    assign arid = arid_reg;
-    assign araddr = araddr_reg;
-    assign arsize = arsize_reg;
-    assign arvalid = arvalid_reg;
-    assign arlen    = 8'b0;
-    assign arburst  = 2'b01;
-    assign arlock   = 2'b0;
-    assign arcache  = 4'b0;
-    assign arprot   = 3'b0;
-    // r
-    assign rready = r_business_cnt_inst != 2'b0 || r_business_cnt_data != 2'b0;
-    // aw
-    assign awaddr = awaddr_reg;
-    assign awsize = awsize_reg;
-    assign awvalid = awvalid_reg;
-    assign awid     = 4'b1;
-    assign awlen    = 8'b0;
-    assign awburst  = 2'b01;
-    assign awlock   = 2'b0;
-    assign awcache  = 4'b0;
-    assign awprot   = 3'b0;
-    // w
-    assign wdata = wdata_reg;
-    assign wstrb = wstrb_reg;
-    assign wvalid = wvalid_reg;
-    assign wid      = 4'b1;
-    assign wlast    = 1'b1;
-    // b
-    assign bready = bready_reg;
-
-    //block signal
-    wire block;
-    assign block = (awaddr == araddr) && awvalid && arvalid;
-
-    //FSM
-    parameter READ_REQ_RST          = 5'b00001;
-    parameter READ_DATA_REQ_START   = 5'b00010;
-    parameter READ_INST_REQ_START   = 5'b00100;
-    parameter READ_DATA_REQ_CHECK   = 5'b01000;
-    parameter READ_REQ_END          = 5'b10000;
-    reg  [ 4:0] rreq_cur_state;
-    reg  [ 4:0] rreq_next_state;
-
-    parameter READ_DATA_RST         = 3'b001;
-    parameter READ_DATA_START       = 3'b010;
-    parameter READ_DATA_END         = 3'b100;
-    reg  [ 2:0] rdata_cur_state;
-    reg  [ 2:0] rdata_next_state;
-
-    parameter WRITE_RST             = 4'b0001;
-    parameter WRITE_CHECK           = 4'b0010;
-    parameter WRITE_START           = 4'b0100;
-    parameter WRITE_END             = 4'b1000;
-    reg  [ 3:0] wrd_cur_state;
-    reg  [ 3:0] wrd_next_state;
-
-
-    parameter WRITE_RSP_RST         = 3'b001;
-    parameter WRITE_RSP_START       = 3'b010;
-    parameter WRITE_RSP_END         = 3'b100;
-    reg  [ 2:0] wrsp_cur_state;
-    reg  [ 2:0] wrsp_next_state;
-
-    reg [1:0] r_business_cnt_inst;
-    reg [1:0] r_business_cnt_data;
-    reg [1:0] w_business_cnt;
-
-    // FSM state transition
-    always @(posedge clk) begin
-        if(!resetn) begin
-            rreq_cur_state  <= READ_REQ_RST;
-            rdata_cur_state <= READ_DATA_RST;
-            wrd_cur_state   <= WRITE_RST;
-            wrsp_cur_state  <= WRITE_RSP_RST;
-        end    
+//读请�?
+    reg     [ 4:0]      rreq_state;
+    reg     [ 4:0]      rreq_next_state;
+    always @(posedge aclk ) begin
+        if(~aresetn)begin
+            rreq_state <= `RREQ_WAIT;
+        end
         else begin
-            rreq_cur_state  <= rreq_next_state;
-            rdata_cur_state <= rdata_next_state;
-            wrd_cur_state   <= wrd_next_state;
-            wrsp_cur_state  <= wrsp_next_state;
-        end 
+            rreq_state <= rreq_next_state;
+        end
     end
-
-
-    //read
-    //read request FSM
     always @(*) begin
-         case(rreq_cur_state)
-            READ_REQ_RST: begin
-                if(data_sram_en & ~data_sram_wr)
-                    rreq_next_state = READ_DATA_REQ_CHECK;
-                else if(inst_sram_en)
-                    rreq_next_state = READ_INST_REQ_START;
+        case (rreq_state)
+            `RREQ_WAIT:
+                if(data_sram_req && !data_sram_wr) //读数据请�?
+                    rreq_next_state = `RREQ_TRAW;
+                else if(inst_sram_req)
+                    rreq_next_state = `RREQ_INST;
                 else
-                    rreq_next_state = rreq_cur_state;
-            end           
-            READ_DATA_REQ_CHECK: begin
-                if(bready & block) // wait for write response
-                    rreq_next_state = rreq_cur_state;
+                    rreq_next_state = `RREQ_WAIT;
+            `RREQ_DATA:
+                if(arvalid && arready)
+                    rreq_next_state = `RREQ_END;
                 else
-                    rreq_next_state = READ_DATA_REQ_START;
-            end
-            READ_DATA_REQ_START, READ_INST_REQ_START: begin
-                if(arvalid & arready)
-                    rreq_next_state = READ_REQ_END;
+                    rreq_next_state = `RREQ_DATA;
+            `RREQ_INST://可以合并
+                if(arvalid && arready)
+                    rreq_next_state = `RREQ_END;
                 else
-                    rreq_next_state = rreq_cur_state;
-            end           
-            READ_REQ_END: begin
-                rreq_next_state = READ_REQ_RST;
-            end
-            default:
-                rreq_next_state = READ_REQ_RST;
+                    rreq_next_state = `RREQ_INST;
+            `RREQ_TRAW:
+                if(bready && raw_blk)
+                    rreq_next_state = `RREQ_TRAW;
+                else
+                    rreq_next_state = `RREQ_DATA;
+            `RREQ_END:
+                rreq_next_state = `RREQ_WAIT;
+            default: 
+                rreq_next_state = `RREQ_WAIT;
         endcase
     end
-
-    // read data FSM
-    always @(*) begin
-            case(rdata_cur_state)
-                READ_DATA_RST: begin
-                    if((arready && arvalid) || r_business_cnt_inst != 2'b0 || r_business_cnt_data != 2'b0) // exists unaddressed read business
-                        rdata_next_state = READ_DATA_START;
-                    else
-                        rdata_next_state = rdata_cur_state;
-                end           
-                READ_DATA_START: begin
-                    if(rvalid & rready)
-                        rdata_next_state = READ_DATA_END;
-                    else
-                        rdata_next_state = rdata_cur_state;
-                end           
-                READ_DATA_END: begin
-                    if(rvalid & rready)
-                        rdata_next_state = rdata_cur_state;
-                    else if(r_business_cnt_inst != 2'b0 || r_business_cnt_data != 2'b0)
-                        rdata_next_state = READ_DATA_START;
-                    else
-                        rdata_next_state = READ_DATA_RST;
-                end
-                default:
-                    rdata_next_state = READ_DATA_RST;
-            endcase
+//读数�?
+    reg     [2:0]   rval_state;
+    reg     [2:0]   rval_next_state;
+    always @(posedge aclk ) begin
+        if(~aresetn)begin
+            rval_state <= `RVAL_WAIT;
+        end
+        else begin
+            rval_state <= rval_next_state;
+        end
     end
-
-    //other AXI signal assignments
+    always @(*) begin
+        case (rval_state)
+            `RVAL_WAIT: 
+                if((|rinst_cnt)||(|rdata_cnt)||(arready&&arvalid))
+                    rval_next_state = `RVAL_DATA;
+                else 
+                    rval_next_state = `RVAL_WAIT;
+            `RVAL_DATA:
+                if(rvalid && rready)
+                    rval_next_state = `RVAL_END;
+                else 
+                    rval_next_state = `RVAL_DATA;
+            `RVAL_END:
+                if(rvalid && rready)
+                    rval_next_state = `RVAL_END;
+                else if((|rinst_cnt)||(|rdata_cnt))
+                    rval_next_state = `RVAL_DATA;
+                else
+                    rval_next_state = `RVAL_WAIT;
+            default: 
+                    rval_next_state = `RVAL_WAIT;
+        endcase
+    end
+//写请�?
+    reg     [3:0]   wreq_state;
+    reg     [3:0]   wreq_next_state;
+    always @(posedge aclk ) begin
+        if (~aresetn) begin
+            wreq_state <= `WREQ_WAIT;
+        end
+        else begin
+            wreq_state <= wreq_next_state;
+        end
+    end
+    always @(*) begin
+        case (wreq_state)
+            `WREQ_WAIT: 
+                if(data_sram_req && data_sram_wr)
+                    wreq_next_state = `WREQ_TRAW;
+                else
+                    wreq_next_state = `WREQ_WAIT;
+            `WREQ_TRAW:
+                if(rready && raw_blk)
+                    wreq_next_state = `WREQ_TRAW;
+                else 
+                    wreq_next_state = `WREQ_DATA;
+            `WREQ_DATA:
+                if(wvalid && wready)
+                    wreq_next_state = `WREQ_END;
+                else
+                    wreq_next_state = `WREQ_DATA;
+            `WREQ_END:
+                wreq_next_state = `WREQ_WAIT;
+            default: 
+                wreq_next_state = `WREQ_WAIT;
+        endcase
+    end
+//写响�?
+    reg     [2:0]   wrsp_state;
+    reg     [2:0]   wrsp_next_state;
+    always @(posedge aclk ) begin
+        if(~aresetn)begin
+            wrsp_state <= `WRSP_WAIT;
+        end
+        else begin
+            wrsp_state <= wrsp_next_state;
+        end
+    end
+    always @(*) begin
+        case (wrsp_state)
+            `WRSP_WAIT:
+                if(wvalid && wready)
+                    wrsp_next_state = `WRSP_BEGN;
+                else
+                    wrsp_next_state = `WRSP_WAIT;
+            `WRSP_BEGN:
+                if(bvalid && bready) 
+                    wrsp_next_state = `WRSP_END;
+                else 
+                    wrsp_next_state = `WRSP_BEGN;
+            `WRSP_END:
+                if(bvalid && bready)
+                    wrsp_next_state = `WRSP_END;
+                else if((wvalid && wready) || (wtask_cnt != 2'b0))//ontest
+                    wrsp_next_state = `WRSP_BEGN;
+                else 
+                    wrsp_next_state = `WRSP_WAIT;
+            default: 
+                wrsp_next_state = `WRSP_WAIT;
+        endcase
+    end
+//ports
     //ar
-    always @(posedge clk) begin
-        if(!resetn) begin
-            arid_reg     <= 4'b0;
-            araddr_reg   <= 32'b0;
-            arsize_reg   <= 3'b0;
+    reg     [ 3:0]      arid_r;
+    reg     [ 2:0]      arsize_r;
+    reg     [31:0]      araddr_r;
+    reg                 arvalid_r;
+    assign arid = arid_r;
+    assign araddr = araddr_r;
+    assign arlen = 8'b0;
+    assign arsize = arsize_r;
+    assign arburst = 2'b1;
+    assign arlock = 2'b0;
+    assign arcache = 4'b0;
+    assign arprot = 3'b0;
+    assign arvalid = arvalid_r;
+    always @(posedge aclk ) begin
+        if(~aresetn)begin
+            arid_r <= 4'b0;
+            arsize_r <= 3'b0;
+            araddr_r <= 32'b0;
         end
-        else if(rreq_next_state == READ_DATA_REQ_START || rreq_cur_state == READ_DATA_REQ_START) begin
-            arid_reg    <= 4'b1;
-            araddr_reg  <= data_sram_addr;
-            arsize_reg  <= {1'b0, data_sram_size};
+        else if(rreq_state[3]|rreq_next_state[3])begin
+            arid_r <= 4'b1;
+            arsize_r <= {1'b0,data_sram_size};
+            araddr_r <= data_sram_addr;
         end
-        else if(rreq_next_state == READ_INST_REQ_START || rreq_cur_state == READ_INST_REQ_START) begin
-            arid_reg    <= 4'b0;
-            araddr_reg  <= inst_sram_addr;
-            arsize_reg  <= {1'b0, inst_sram_size};
+        else if(rreq_next_state[1]|rreq_state[1])begin
+            arid_r <= 4'b0;
+            arsize_r <= {1'b0,inst_sram_size};
+            araddr_r <= inst_sram_addr;
         end
         else begin
-            arid_reg     <= 4'b0;
-            araddr_reg   <= 32'b0;
-            arsize_reg   <= 3'b0;
+            arid_r <= 4'b0;
+            arsize_r <= 3'b0;
+            araddr_r <= 32'b0;
         end
     end
-
-    //ar valid
-    always @(posedge clk) begin
-        if(!resetn|(arready & arvalid))
-            arvalid_reg <= 1'b0;
-        else if(rreq_next_state == READ_DATA_REQ_START || rreq_next_state == READ_INST_REQ_START)
-            arvalid_reg <= 1'b1;
-        else 
-            arvalid_reg <= 1'b0;
-    end
-
-    //rid
-    reg [3:0] rid_reg;
-    always @(posedge clk) begin
-        if(!resetn || rdata_next_state == READ_DATA_RST)
-            rid_reg <= 4'b0;
-        else if(rvalid & rready)
-            rid_reg <= rid;
-    end
-
-    //counters
-    //r read business counter
-    always @(posedge clk) begin
-        if(!resetn) begin
-            r_business_cnt_inst <= 2'b0;
-            r_business_cnt_data <= 2'b0;
-        end
-        else if(arready & arvalid & rvalid & rready) begin
-            if(~arid[0] && ~rid[0]) begin
-                r_business_cnt_inst <= r_business_cnt_inst;
-            end else if(~arid[0] && rid[0]) begin
-                r_business_cnt_inst <= r_business_cnt_inst + 2'b1;
-                r_business_cnt_data <= r_business_cnt_data - 2'b1;
-            end else if(arid[0] && ~rid[0]) begin
-                r_business_cnt_inst <= r_business_cnt_inst - 2'b1;
-                r_business_cnt_data <= r_business_cnt_data + 2'b1;
-            end else if(arid[0] && rid[0]) begin
-                r_business_cnt_data <= r_business_cnt_data;
-            end
-        end
-        else if(arready & arvalid) begin
-            if(~arid[0]) begin
-                r_business_cnt_inst <= r_business_cnt_inst + 2'b1;
-            end else begin
-                r_business_cnt_data <= r_business_cnt_data + 2'b1;
-            end
-        end
-        else if(rvalid & rready) begin
-            if(~rid[0]) begin
-                r_business_cnt_inst <= r_business_cnt_inst - 2'b1;
-            end else begin
-                r_business_cnt_data <= r_business_cnt_data - 2'b1;
-            end
+    always @(posedge aclk) begin
+        if(~aresetn|arready) begin
+            arvalid_r <= 1'b0;
+        end 
+        else if(rreq_state[1]|rreq_state[3]) begin
+            arvalid_r <= 1'b1;
+        end 
+        else begin
+            arvalid_r <= arvalid_r;
         end
     end
-
-
-    //write
-    //write request FSM
-    always @(*) begin
-            case(wrd_cur_state)
-                WRITE_RST: begin
-                    if(data_sram_en & data_sram_wr)
-                        wrd_next_state = WRITE_CHECK;
-                    else
-                        wrd_next_state = wrd_cur_state;
-                end           
-                WRITE_CHECK: begin
-                    if(rready & block) // wait for write response
-                        wrd_next_state = wrd_cur_state;
-                    else
-                        wrd_next_state = WRITE_START;
-                end           
-                WRITE_START: begin
-                    if(wvalid & wready)
-                        wrd_next_state = WRITE_END;
-                    else
-                        wrd_next_state = wrd_cur_state;
-                end           
-                WRITE_END: begin
-                    wrd_next_state = WRITE_RST;
-                end
-                default:
-                    wrd_next_state = WRITE_RST;
-            endcase
+    //r
+    assign rready=rinst_cnt!=2'b0 || rdata_cnt!=2'b0;
+    reg [3:0]   rid_r;
+    always @(posedge aclk) begin
+        if(~aresetn|rval_next_state[0]) begin
+            rid_r <= 4'b0;
+        end 
+        else if(rvalid) begin
+            rid_r <= rid;
+        end
     end
-
-    // write response FSM
-    always @(*) begin
-        case(wrsp_cur_state)
-            WRITE_RSP_RST: begin
-                if(wvalid & wready) 
-                    wrsp_next_state = WRITE_RSP_START;
-                else
-                    wrsp_next_state = wrsp_cur_state;
-            end
-            WRITE_RSP_START: begin
-                if(bvalid & bready)
-                    wrsp_next_state = WRITE_RSP_END;
-                else
-                    wrsp_next_state = wrsp_cur_state;
-            end
-            WRITE_RSP_END: begin
-                if(bvalid & bready)
-                    wrsp_next_state = wrsp_cur_state;
-                else if(wvalid & wready || w_business_cnt != 2'b0)
-                    wrsp_next_state = WRITE_RSP_START;
-                else
-                    wrsp_next_state = WRITE_RSP_RST;
-            end
-            default:
-                wrsp_next_state = WRITE_RSP_RST;
-        endcase
-    end
-
-    //other AXI signal assignments
     //aw
-    always @(posedge clk) begin
-        if(!resetn) begin
-            awaddr_reg   <= 32'b0;
-            awsize_reg   <= 3'b0;
-        end
-        else if(wrd_next_state == WRITE_START || wrd_cur_state == WRITE_START) begin
-            awaddr_reg  <= data_sram_addr;
-            awsize_reg  <= {1'b0, data_sram_size};
-        end
+    reg     [31:0]  awaddr_r;
+    reg     [ 2:0]  awsize_r;
+    reg             awvalid_r;
+    reg             awready_r;
+    assign awid    = 4'b1;
+    assign awaddr  = awaddr_r;
+    assign awlen   = 8'b0;
+    assign awsize  = awsize_r;
+    assign awburst = 2'b01;
+    assign awlock  = 2'b0;
+    assign awcache = 4'b0;
+    assign awprot  = 3'b0;
+    assign awvalid = awvalid_r;
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            awaddr_r <= 32'b0;
+            awsize_r <= 3'b0;
+        end 
+        else if(wreq_state[2])begin
+            awaddr_r <= data_sram_addr;
+            awsize_r <= {1'b0,data_sram_size};
+        end 
         else begin
-            awaddr_reg   <= 32'b0;
-            awsize_reg   <= 3'b0;
+            awaddr_r <= 32'b0;
+            awsize_r <= 3'b0;
         end
     end
-
-    //wr transport
-    reg wr_transport;
-    always @(posedge clk) begin
-        if(!resetn)
-            wr_transport <= 1'b0;
-        else if(awvalid && awready)
-            wr_transport <= 1'b1;
-        else if(wrd_next_state == WRITE_END || wrd_cur_state == WRITE_END)
-            wr_transport <= 1'b0;
-    end
-
-    //aw valid
-    always @(posedge clk) begin
-        if(!resetn)
-            awvalid_reg <= 1'b0;
-        else if(wrd_cur_state == WRITE_START)
-            awvalid_reg <= 1'b1;
-        else if(awvalid & (awready | wr_transport))
-            awvalid_reg <= 1'b0;
-    end
-
-    //w data
-    always @(posedge clk) begin
-        if(!resetn) begin
-            wdata_reg <= 32'b0;
-            wstrb_reg <= 4'b0;
+    always @(posedge aclk) begin
+        if(~aresetn || awready || awready_r) begin
+            awvalid_r <= 1'b0;
         end
-        else if(wrd_cur_state == WRITE_START || wrd_next_state == WRITE_START) begin
-            wdata_reg <= data_sram_wdata;
-            wstrb_reg <= data_sram_wstrb;
+        else if(wreq_state[2]) begin
+            awvalid_r <= 1'b1;
         end
+    end
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            awready_r <= 1'b0;
+        end
+        else if(awvalid && awready) begin
+            awready_r <= 1'b1;
+        end 
+        else if(wreq_next_state[3]) begin
+            awready_r <= 1'b0;
+        end
+    end
+    //w
+    reg     [31:0]  wdata_r;
+    reg     [ 3:0]  wstrb_r;
+    reg             wvalid_r;
+    assign wid     = 4'b1;
+    assign wdata   = wdata_r;
+    assign wstrb   = wstrb_r;
+    assign wlast   = 1'b1;
+    assign wvalid  = wvalid_r;
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            wdata_r <= 32'b0;
+            wstrb_r <= 4'b0;
+        end 
+        else if(wreq_state[2]) begin
+            wdata_r <= data_sram_wdata;
+            wstrb_r <= data_sram_wstrb;
+        end
+    end
+    always @(posedge aclk) begin
+        if(~aresetn || wready) begin
+            wvalid_r <= 1'b0;
+        end 
+        else if(wreq_state[2]) begin
+            wvalid_r <= 1'b1;
+        end 
         else begin
-            wdata_reg <= 32'b0;
-            wstrb_reg <= 4'b0;
+            wvalid_r <= 1'b0;
         end
     end
-
-    //w valid
-    always @(posedge clk) begin
-        if(!resetn | (wready & wvalid))
-            wvalid_reg <= 1'b0;
-        else if(wrd_cur_state == WRITE_START)
-            wvalid_reg <= 1'b1;
-        else 
-            wvalid_reg <= 1'b0;
+    //b
+    reg     bready_r;
+    assign bready  = bready_r;
+    always @(posedge aclk) begin
+        if(~aresetn || bvalid) begin
+            bready_r <= 1'b0;
+        end 
+        else if(wrsp_next_state[1]) begin
+            bready_r <= 1'b1;
+        end 
+        else begin
+            bready_r <= 1'b0;
+        end
+    end    
+//任务计数�?
+    reg [1:0]   rinst_cnt;
+    reg [1:0]   rdata_cnt;
+    reg [1:0]   wtask_cnt;
+    always @(posedge aclk ) begin
+        if(~aresetn)
+            rinst_cnt<=2'b0;
+        else if ((arready&&arvalid)&&(rready&&rvalid))begin
+            if(arid==4'b0&&rid==4'b1)
+                rinst_cnt<=rinst_cnt+2'b1;
+            else if(arid==4'b1&&rid==4'b0)
+                rinst_cnt<=rinst_cnt-2'b1;
+        end
+        else if(rready&&rvalid)
+            rinst_cnt<=rinst_cnt-2'b1;
+        else if(arready&&arvalid)
+            rinst_cnt<=rinst_cnt+2'b1;
     end
-
-    //b ready
-    always @(posedge clk) begin
-        if(!resetn)
-            bready_reg <= 1'b0;
-        else if(wrsp_cur_state == WRITE_RSP_START)
-            bready_reg <= 1'b1;
-        else if(bvalid & bready)
-            bready_reg <= 1'b0;
+    always @(posedge aclk ) begin
+        if(~aresetn)
+            rdata_cnt<=2'b0;
+        else if ((arready&&arvalid)&&(rready&&rvalid))begin
+            if(arid==4'b0&&rid==4'b1)
+                rdata_cnt<=rdata_cnt-2'b1;
+            else if(arid==4'b1&&rid==4'b0)
+                rdata_cnt<=rdata_cnt+2'b1;
+        end
+        else if(rready&&rvalid)
+            rdata_cnt<=rdata_cnt-2'b1;
+        else if(arready&&arvalid)
+            rdata_cnt<=rdata_cnt+2'b1;
     end
-
-    //counters
-    //w write business counter
-    always @(posedge clk) begin
-        if(!resetn) begin
-            w_business_cnt <= 2'b0;
-        end
-        else if(wvalid & wready & bvalid & bready) begin
-            w_business_cnt <= w_business_cnt;
-        end
-        else if(wvalid & wready) begin
-            w_business_cnt <= w_business_cnt + 2'b1;
-        end
-        else if(bvalid & bready) begin
-            w_business_cnt <= w_business_cnt - 2'b1;
-        end
-    end
-
-
-    //sram addr/data ok signals
-    wire data_read_ok;
-    wire data_write_ok;
-    assign data_read_ok  = (rdata_cur_state == READ_DATA_END && rid_reg[0]);
-    assign data_write_ok = (wrsp_cur_state == WRITE_RSP_END);
-    assign data_sram_data_ok = data_read_ok || data_write_ok;
-
-    assign inst_sram_addr_ok = rreq_cur_state == READ_REQ_END && ~arid[0];
-    assign inst_sram_data_ok = rdata_cur_state == READ_DATA_END && ~rid_reg[0];
-    assign data_sram_addr_ok = (rreq_cur_state == READ_REQ_END && arid[0]) || (wrd_cur_state == WRITE_END); //read or write
-    
-
-    //sram data output
-    reg [31:0] inst_sram_rdata_reg;
-    reg [31:0] data_sram_rdata_reg;
-    assign inst_sram_rdata = inst_sram_rdata_reg;
-    assign data_sram_rdata = data_sram_rdata_reg;
-
-    always @(posedge clk) begin
-        if(!resetn) begin
-            inst_sram_rdata_reg <= 32'b0;
-            data_sram_rdata_reg <= 32'b0;
-        end
-        else if(rvalid && rready) begin
-            if(~rid_reg[0])
-                inst_sram_rdata_reg <= rdata;
-            else
-                data_sram_rdata_reg <= rdata;
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            wtask_cnt <= 2'b0;
+        end 
+        else if((bvalid&&bready)&&(wvalid&&wready)) begin
+            wtask_cnt <= wtask_cnt;
+        end 
+        else if(wvalid&&wready) begin
+            wtask_cnt<=wtask_cnt+2'b1;
+        end 
+        else if(bvalid&&bready) begin
+            wtask_cnt<=wtask_cnt-2'b1;
         end
     end
-
-
+//写后读相关检�?
+    wire    raw_blk;
+    assign raw_blk = arvalid_r && awvalid_r && (awaddr_r == araddr_r);
+//ok信号与数�?
+    reg     [31:0]  inst_buffer;
+    reg     [31:0]  data_buffer;
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            inst_buffer <= 32'b0;
+        end 
+        else if(rvalid && rready && ~rid[0]) begin
+            inst_buffer <= rdata;
+        end
+    end
+    always @(posedge aclk) begin
+        if(~aresetn) begin
+            data_buffer <= 32'b0;
+        end 
+        else if(rvalid && rready && rid[0]) begin
+            data_buffer <= rdata;
+        end
+    end
+    assign inst_sram_rdata = inst_buffer;
+    assign data_sram_rdata = data_buffer;
+    assign inst_sram_addr_ok = rreq_state[4]&~arid[0];
+    assign inst_sram_data_ok = rval_state[2]&~rid_r[0];
+    assign data_sram_addr_ok = rreq_state[4]&arid[0]|wreq_state[3];
+    assign data_sram_data_ok = rval_state[2]&rid_r[0]|wrsp_state[2];
 endmodule
