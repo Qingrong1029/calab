@@ -108,8 +108,8 @@ mycpu_sram u_mycpu_sram(
 );
 
 transfer_axi_bridge u_transfer_axi_bridge(
-    .clk               (aclk             ),
-    .resetn            (aresetn          ),
+    .aclk               (aclk             ),
+    .aresetn            (aresetn          ),
 
     .arid              (arid             ),
     .araddr            (araddr           ),

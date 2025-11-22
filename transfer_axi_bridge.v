@@ -13,76 +13,77 @@
 `define WRSP_WAIT 3'b001
 `define WRSP_BEGN 3'b010
 `define WRSP_END  3'b100
-module AXI_bridge (
-    //时钟与复位信�?
-    input               clk,
-    input               resetn,
-    //读请求�?�道，以ar�?�?
-    //master->slave
-    output  [ 3:0]      arid,
-    output  [31:0]      araddr,
-    output  [ 7:0]      arlen,
-    output  [ 2:0]      arsize,
-    output  [ 1:0]      arburst,
-    output  [ 1:0]      arlock,
-    output  [ 3:0]      arcache,
-    output  [ 2:0]      arprot,
-    output              arvalid,
-    input               arready,
-    //读响应�?�道，以r�?�?
-    input   [ 3:0]      rid,
-    input   [31:0]      rdata,
-    input   [ 1:0]      rresp,
-    input               rlast,
-    input               rvalid,
-    output              rready,
-    //写请求�?�道，以aw�?�?
-    output  [ 3:0]      awid,
-    output  [31:0]      awaddr,
-    output  [ 7:0]      awlen,
-    output  [ 2:0]      awsize,
-    output  [ 1:0]      awburst,
-    output  [ 1:0]      awlock,
-    output  [ 3:0]      awcache,
-    output  [ 2:0]      awprot,
-    output              awvalid,
-    input               awready,
-    //写数据�?�道，以w�?�?
-    output  [ 3:0]      wid,
-    output  [31:0]      wdata,
-    output  [ 3:0]      wstrb,
-    output              wlast,
-    output              wvalid,
-    input               wready,
-    //写响应�?�道，以b�?�?
-    input   [ 3:0]      bid,
-    input   [ 1:0]      bresp,
-    input               bvalid,
-    output              bready,
-    //指令存储器相�?
-    //in
-    input               inst_sram_req,
-    input               inst_sram_wr,
-    input   [ 3:0]      inst_sram_wstrb,
-    input   [ 1:0]      inst_sram_size,
-    input   [31:0]      inst_sram_addr,
-    input   [31:0]      inst_sram_wdata,
-    //out
-    output  [31:0]      inst_sram_rdata,
-    output              inst_sram_addr_ok,
-    output              inst_sram_data_ok,
-    //数据存储器相�?
-    //in
-    input               data_sram_req,
-    input               data_sram_wr,
-    input   [ 3:0]      data_sram_wstrb,
-    input   [ 1:0]      data_sram_size,
-    input   [31:0]      data_sram_addr,
-    input   [31:0]      data_sram_wdata,
-    //out       
-    output              data_sram_addr_ok,
-    output              data_sram_data_ok,
-    output  [31:0]      data_sram_rdata
+module transfer_axi_bridge (
+    input wire         aclk    ,
+    input wire         aresetn ,
+ 
+    // ar 
+    output wire    [ 3:0] arid   ,
+    output wire    [31:0] araddr ,
+    output wire    [ 7:0] arlen  , 
+    output wire    [ 2:0] arsize , 
+    output wire    [ 1:0] arburst, 
+    output wire    [ 1:0] arlock , 
+    output wire    [ 3:0] arcache, 
+    output wire    [ 2:0] arprot ,
+    output wire           arvalid, 
+    input  wire           arready,
+
+    // r
+    input  wire    [ 3:0] rid   , 
+    input  wire    [31:0] rdata , 
+    input  wire    [ 1:0] rresp , 
+    input  wire           rlast , 
+    input  wire           rvalid,
+    output wire           rready, 
+
+    // aw
+    output wire    [ 3:0] awid   ,
+    output wire    [31:0] awaddr , 
+    output wire    [ 7:0] awlen  ,
+    output wire    [ 2:0] awsize ,
+    output wire    [ 1:0] awburst,
+    output wire    [ 1:0] awlock , 
+    output wire    [ 3:0] awcache,
+    output wire    [ 2:0] awprot , 
+    output wire           awvalid,
+    input  wire           awready, 
+
+    // w
+    output wire    [ 3:0] wid   , 
+    output wire    [31:0] wdata , 
+    output wire    [ 3:0] wstrb , 
+    output wire           wlast , 
+    output wire           wvalid,
+    input  wire           wready, 
+ 
+    // b 
+    input  wire   [ 3:0] bid   , 
+    input  wire   [ 1:0] bresp ,  
+    input  wire          bvalid, 
+    output wire          bready, 
+
+    // inst sram interface    
+    input  wire          inst_sram_req   ,
+    input  wire          inst_sram_wr     ,
+    input  wire   [ 1:0] inst_sram_size   ,
+    input  wire   [ 3:0] inst_sram_wstrb  ,
+    input  wire   [31:0] inst_sram_addr   ,
+    input  wire   [31:0] inst_sram_wdata  ,
+    output wire   [31:0] inst_sram_rdata  ,
+    output wire          inst_sram_addr_ok,
+    output wire          inst_sram_data_ok,
+    
+    // data sram interface
+    input  wire          data_sram_req   ,
+    input  wire          data_sram_wr     ,
+    input  wire   [ 3:0] data_sram_wstrb  ,
+    input  wire   [ 1:0] data_sram_size   , 
+    input  wire   [31:0] data_sram_addr   ,
+    input  wire   [31:0] data_sram_wdata  ,
+    output wire   [31:0] data_sram_rdata  ,
+    output wire          data_sram_addr_ok,
+    output wire          data_sram_data_ok
 );
 //读请�?
     reg     [ 4:0]      rreq_state;
