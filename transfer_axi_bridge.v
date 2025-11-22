@@ -240,12 +240,12 @@ module transfer_axi_bridge(
             araddr_reg   <= 32'b0;
             arsize_reg   <= 3'b0;
         end
-        else if(rreq_next_state == READ_DATA_REQ_START) begin
+        else if(rreq_next_state == READ_DATA_REQ_START || rreq_cur_state == READ_DATA_REQ_START) begin
             arid_reg    <= 4'b1;
             araddr_reg  <= data_sram_addr;
             arsize_reg  <= {1'b0, data_sram_size};
         end
-        else if(rreq_next_state == READ_INST_REQ_START) begin
+        else if(rreq_next_state == READ_INST_REQ_START || rreq_cur_state == READ_INST_REQ_START) begin
             arid_reg    <= 4'b0;
             araddr_reg  <= inst_sram_addr;
             arsize_reg  <= {1'b0, inst_sram_size};
@@ -259,11 +259,11 @@ module transfer_axi_bridge(
 
     //ar valid
     always @(posedge clk) begin
-        if(!resetn)
+        if(!resetn|(arready & arvalid))
             arvalid_reg <= 1'b0;
         else if(rreq_next_state == READ_DATA_REQ_START || rreq_next_state == READ_INST_REQ_START)
             arvalid_reg <= 1'b1;
-        else if(arvalid & arready)
+        else 
             arvalid_reg <= 1'b0;
     end
 

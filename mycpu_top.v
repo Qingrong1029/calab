@@ -1,6 +1,6 @@
 module mycpu_top(
     input wire         aclk   ,
-    input wire        aresetn ,
+    input wire         aresetn,
  
     // ar 
     output wire [ 3:0] arid   , 
@@ -11,8 +11,8 @@ module mycpu_top(
     output wire [ 1:0] arlock ,
     output wire [ 3:0] arcache,
     output wire [ 2:0] arprot ,
-    output wire       arvalid , 
-    input  wire       arready , 
+    output wire        arvalid, 
+    input  wire        arready, 
 
     // r
     input  wire [ 3:0] rid    , 
@@ -20,37 +20,37 @@ module mycpu_top(
     input  wire [ 1:0] rresp  ,  
     input  wire        rlast  ,  
     input  wire        rvalid ,  
-    output wire       rready  , 
+    output wire        rready , 
 
     // aw
-    output wire [ 3:0] awid  , 
-    output wire [31:0] awaddr, 
-    output wire [ 7:0] awlen , 
+    output wire [ 3:0] awid   , 
+    output wire [31:0] awaddr , 
+    output wire [ 7:0] awlen  , 
     output wire [ 2:0] awsize , 
     output wire [ 1:0] awburst, 
     output wire [ 1:0] awlock , 
     output wire [ 3:0] awcache, 
     output wire [ 2:0] awprot , 
-    output wire       awvalid, 
-    input  wire       awready, 
+    output wire        awvalid, 
+    input  wire        awready, 
 
     // w
     output wire [ 3:0] wid    , 
     output wire [31:0] wdata  , 
     output wire [ 3:0] wstrb  , 
-    output wire       wlast  , 
-    output wire       wvalid , 
-    input  wire       wready , 
+    output wire        wlast  , 
+    output wire        wvalid , 
+    input  wire        wready , 
 
     // b
     input  wire [ 3:0] bid    , 
     input  wire [ 1:0] bresp  , 
-    input  wire       bvalid  , 
+    input  wire        bvalid , 
     output wire        bready , 
 
     // trace debug interface
     output wire [31:0] debug_wb_pc      ,
-    output wire [ 3:0] debug_wb_rf_we  ,
+    output wire [ 3:0] debug_wb_rf_we   ,
     output wire [ 4:0] debug_wb_rf_wnum ,
     output wire [31:0] debug_wb_rf_wdata
 );
@@ -102,7 +102,7 @@ mycpu_sram u_mycpu_sram(
     .data_sram_data_ok (data_sram_data_ok),
      
     .debug_wb_pc       (debug_wb_pc      ),
-    .debug_wb_rf_we   (debug_wb_rf_we  ),
+    .debug_wb_rf_we    (debug_wb_rf_we  ),
     .debug_wb_rf_wnum  (debug_wb_rf_wnum ),
     .debug_wb_rf_wdata (debug_wb_rf_wdata)
 );
@@ -152,7 +152,7 @@ transfer_axi_bridge u_transfer_axi_bridge(
     .bvalid            (bvalid           ),
     .bready            (bready           ),
 
-    .inst_sram_en     (inst_sram_req    ),
+    .inst_sram_en      (inst_sram_req    ),
     .inst_sram_wr      (inst_sram_wr     ),
     .inst_sram_size    (inst_sram_size   ),
     .inst_sram_wstrb   (inst_sram_wstrb  ),
@@ -162,7 +162,7 @@ transfer_axi_bridge u_transfer_axi_bridge(
     .inst_sram_addr_ok (inst_sram_addr_ok),
     .inst_sram_data_ok (inst_sram_data_ok),
 
-    .data_sram_en     (data_sram_req    ),
+    .data_sram_en      (data_sram_req    ),
     .data_sram_wr      (data_sram_wr     ),
     .data_sram_wstrb   (data_sram_wstrb  ),
     .data_sram_size    (data_sram_size   ),
