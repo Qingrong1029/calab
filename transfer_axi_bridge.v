@@ -427,11 +427,11 @@ module transfer_axi_bridge(
 
     //w valid
     always @(posedge clk) begin
-        if(!resetn)
+        if(!resetn | (wready & wvalid))
             wvalid_reg <= 1'b0;
         else if(wrd_cur_state == WRITE_START)
             wvalid_reg <= 1'b1;
-        else if(wvalid & wready)
+        else 
             wvalid_reg <= 1'b0;
     end
 
@@ -464,10 +464,16 @@ module transfer_axi_bridge(
 
 
     //sram addr/data ok signals
+    wire data_read_ok;
+    wire data_write_ok;
+    assign data_read_ok  = (rdata_cur_state == READ_DATA_END && rid_reg[0]);
+    assign data_write_ok = (wrsp_cur_state == WRITE_RSP_END);
+    assign data_sram_data_ok = data_read_ok || data_write_ok;
+
     assign inst_sram_addr_ok = rreq_cur_state == READ_REQ_END && ~arid[0];
     assign inst_sram_data_ok = rdata_cur_state == READ_DATA_END && ~rid_reg[0];
     assign data_sram_addr_ok = (rreq_cur_state == READ_REQ_END && arid[0]) || (wrd_cur_state == WRITE_END); //read or write
-    assign data_sram_data_ok = (rdata_cur_state == READ_DATA_END && rid_reg[0]) || (wrsp_cur_state == WRITE_RSP_END); //read or write
+    
 
     //sram data output
     reg [31:0] inst_sram_rdata_reg;
