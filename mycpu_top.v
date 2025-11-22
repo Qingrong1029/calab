@@ -11,8 +11,8 @@ module mycpu_top(
     output wire [ 1:0] arlock ,
     output wire [ 3:0] arcache,
     output wire [ 2:0] arprot ,
-    output wire       arvalid , 
-    input  wire       arready , 
+    output wire        arvalid , 
+    input  wire        arready , 
 
     // r
     input  wire [ 3:0] rid    , 
@@ -45,7 +45,7 @@ module mycpu_top(
     // b
     input  wire [ 3:0] bid    , 
     input  wire [ 1:0] bresp  , 
-    input  wire       bvalid  , 
+    input  wire        bvalid , 
     output wire        bready , 
 
     // trace debug interface
@@ -152,7 +152,7 @@ transfer_axi_bridge u_transfer_axi_bridge(
     .bvalid            (bvalid           ),
     .bready            (bready           ),
 
-    .inst_sram_en     (inst_sram_req    ),
+    .inst_sram_en      (inst_sram_req    ),
     .inst_sram_wr      (inst_sram_wr     ),
     .inst_sram_size    (inst_sram_size   ),
     .inst_sram_wstrb   (inst_sram_wstrb  ),
@@ -162,7 +162,7 @@ transfer_axi_bridge u_transfer_axi_bridge(
     .inst_sram_addr_ok (inst_sram_addr_ok),
     .inst_sram_data_ok (inst_sram_data_ok),
 
-    .data_sram_en     (data_sram_req    ),
+    .data_sram_en      (data_sram_req    ),
     .data_sram_wr      (data_sram_wr     ),
     .data_sram_wstrb   (data_sram_wstrb  ),
     .data_sram_size    (data_sram_size   ),

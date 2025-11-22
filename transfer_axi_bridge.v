@@ -241,7 +241,7 @@ module transfer_axi_bridge(
             arsize_reg   <= 3'b0;
         end
         else if(rreq_next_state == READ_DATA_REQ_START) begin
-            arid_reg    <= 4'b0;
+            arid_reg    <= 4'b1;
             araddr_reg  <= data_sram_addr;
             arsize_reg  <= {1'b0, data_sram_size};
         end
