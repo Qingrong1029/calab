@@ -7,7 +7,7 @@ module ID (
     input           if_id_valid,
     output          id_allowin,
     input   [96:0]  if_id_bus,
-    output  [32:0]  id_if_bus,
+    output  [33:0]  id_if_bus,
 
     input           ex_allowin,
     output          id_ex_valid,
@@ -25,6 +25,7 @@ module ID (
     wire    [31:0]  id_inst;
     wire    [31:0]  id_pc;
     wire            br_taken;
+    wire            br_stall;
     wire    [31:0]  br_target;
     reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
@@ -51,8 +52,8 @@ module ID (
     wire    [13:0]  ex_csr_num;
     wire    [13:0]  mem_csr_num;
     
-    assign mem_type = inst_ld_w  ? 3'b000 :  // word
-                      inst_st_w  ? 3'b000 :  // word
+    assign mem_type = inst_ld_w  ? 3'b111 :  // word
+                      inst_st_w  ? 3'b111 :  // word
                       inst_ld_h  ? 3'b001 :  // halfword
                       inst_st_h  ? 3'b001 :  // halfword
                       inst_ld_hu ? 3'b101 :  // halfword unsigned
@@ -185,6 +186,8 @@ module ID (
     wire        inst_rdcntid;
     wire        inst_rdcntvl;
     wire        inst_rdcntvh;
+    
+    wire        is_b;
 
     wire        need_ui5;
     wire        need_si12;
@@ -218,13 +221,12 @@ module ID (
 
     //exception exp13
     wire        id_ine;
-    wire        id_adef;
     wire [5:0]  id_ecode;
 
         // 增加load/store操作类型，用于EX阶段ALE检测
-    wire    [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
-    wire    [2:0]  id_store_op;  // st_b, st_h, st_w
-    wire    [ 8:0]  id_esubcode;
+    wire [4:0]  id_load_op;   // ld_b, ld_h, ld_w, ld_bu, ld_hu
+    wire [2:0]  id_store_op;  // st_b, st_h, st_w
+    wire [8:0]  id_esubcode;
     
     assign op_31_26  = id_inst[31:26];
     assign op_25_22  = id_inst[25:22];
@@ -331,16 +333,16 @@ module ID (
     assign alu_op[14] = inst_mulh_wu;
 
 
-// 定义load_op和store_op
-assign id_load_op[0] = inst_ld_b;
-assign id_load_op[1] = inst_ld_h; 
-assign id_load_op[2] = inst_ld_w;
-assign id_load_op[3] = inst_ld_bu;
-assign id_load_op[4] = inst_ld_hu;
-
-assign id_store_op[0] = inst_st_b;
-assign id_store_op[1] = inst_st_h;
-assign id_store_op[2] = inst_st_w;
+    // 定义load_op和store_op
+    assign id_load_op[0] = inst_ld_b;
+    assign id_load_op[1] = inst_ld_h; 
+    assign id_load_op[2] = inst_ld_w;
+    assign id_load_op[3] = inst_ld_bu;
+    assign id_load_op[4] = inst_ld_hu;
+    
+    assign id_store_op[0] = inst_st_b;
+    assign id_store_op[1] = inst_st_h;
+    assign id_store_op[2] = inst_st_w;
 
     //除法器调用
     assign id_div_en =  inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu;
@@ -371,7 +373,7 @@ assign id_store_op[2] = inst_st_w;
 
     assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
-    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_csrrd | inst_csrwr | inst_csrxchg;
+    assign src_reg_is_rd = inst_beq | inst_bne | inst_st_w | inst_st_b | inst_st_h | inst_blt | inst_bge | inst_bltu | inst_bgeu  | inst_csrwr | inst_csrxchg;
 
     assign src1_is_pc    = inst_jirl | inst_bl | inst_pcaddu12i;
 
@@ -421,12 +423,12 @@ assign id_store_op[2] = inst_st_w;
         .wdata  (rf_wdata )
         );
 
-    assign rj_value  = (ex_bypass  & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
-    assign rkd_value = (ex_bypass  & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
-                       (mem_bypass & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
-                       (rf_we      & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
+    assign rj_value  = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr1 )& need_addr1 & (rf_raddr1 != 0)) ? rf_wdata  : rf_rdata1;
+    assign rkd_value = (ex_bypass  & id_valid & ( ex_dest  == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? ex_wdata  :
+                       (mem_bypass & id_valid & ( mem_dest == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? mem_wdata :
+                       (rf_we      & id_valid & ( rf_waddr == rf_raddr2 )& need_addr2 & (rf_raddr2 != 0)) ? rf_wdata  : rf_rdata2;
     assign rj_lt_rd_signed   = $signed(rj_value) < $signed(rkd_value);
     assign rj_ge_rd_signed   = $signed(rj_value) >= $signed(rkd_value);
     assign rj_lt_rd_unsigned = rj_value < rkd_value;  // 无符号比较就是直接比较
@@ -447,6 +449,10 @@ assign id_store_op[2] = inst_st_w;
 
     assign br_target = (inst_beq || inst_bne || inst_bl || inst_b||inst_blt || inst_bge || inst_bltu || inst_bgeu) ? (id_pc + br_offs) :
                                                     /*inst_jirl*/ (rj_value + jirl_offs);
+    assign is_b = inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu | inst_bl | inst_jirl | inst_b;
+    assign br_stall = ex_ld & is_b &
+                    ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                     (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0));
     assign alu_src1 = src1_is_pc  ? id_pc : rj_value;
     assign alu_src2 = src2_is_imm ? imm : rkd_value;
     //csr exp12
@@ -465,54 +471,23 @@ assign id_store_op[2] = inst_st_w;
     };
 
     assign id_if_bus = {
-        br_taken & id_ready_go , br_target
+        br_taken & id_ready_go , br_target , br_stall
     };
     
     //csr_block
     wire csr_block;
-assign csr_block = 
-    // 第一套逻辑：ID段是普通指令，但EX/MEM/WB段有CSR指令且存在数据相关
-    ((ex_csr & ex_gr_we & ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))) |
-     (mem_csr & mem_gr_we & ((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                            (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))) |
-     (wb_csr & rf_we & ((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                       (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))) |
+    assign csr_block =(ex_csr & 
+                         ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                          (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))|
+                      (mem_csr & 
+                         ((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
+                          (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)));
     
-    // 第二套逻辑：ID段是CSR指令，但EX/MEM/WB段有指令（不一定是CSR）且存在数据相关
-    ((id_csr_re | id_csr_we) &
-        (ex_gr_we & ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                    (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)) |
-         mem_gr_we & ((mem_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                     (mem_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)) |
-         rf_we & ((rf_waddr == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
-                 (rf_waddr == rf_raddr2) & need_addr2 & (rf_raddr2 != 0))));
-
-
-
-   assign block_not = (((id_csr_re | id_csr_we) & (rf_waddr != 0) &
-                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
-                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))) ||
-                   // 情况2: 写回阶段的CSR数据前推  
-                   (rf_we & wb_csr & (rf_waddr != 0) &
-                    (need_addr1 & (rf_raddr1 != 0) & (rf_waddr == rf_raddr1) |
-                     need_addr2 & (rf_raddr2 != 0) & (rf_waddr == rf_raddr2))))&csr_block;
-    
-    reg block_not_prev;  // 记录上一拍的block_not状态
-    
-
-    always @(posedge clk) begin
-        if (~resetn) begin
-            block_not_prev <= 1'b0;
-        end else begin
-            block_not_prev <= block_not;
-        end
-    end
-    assign id_ready_go =  (ertn_flush | wb_ex|block_not_prev) ? 1'b1 :
+    assign id_ready_go =  (ertn_flush | wb_ex) ? 1'b1 :
                         ~( (ex_ld & 
                          ((ex_dest == rf_raddr1) & need_addr1 & (rf_raddr1 != 0) | 
                           (ex_dest == rf_raddr2) & need_addr2 & (rf_raddr2 != 0)))
-                         | ex_div_busy | csr_block);  // 只要 EX 报 busy，就阻塞 ID 发射
+                         | ex_div_busy | csr_block);
     assign need_addr1   = inst_add_w | inst_sub_w | inst_slt | inst_addi_w | inst_sltu | inst_nor | 
                           inst_and | inst_or | inst_xor | inst_srli_w | inst_slli_w | inst_srai_w | 
                           inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu |
@@ -523,7 +498,7 @@ assign csr_block =
     assign need_addr2   = inst_add_w | inst_sub_w | inst_slt | inst_sltu | inst_and | inst_or | inst_nor | 
                           inst_xor | inst_st_w | inst_st_b | inst_st_h |
                           inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu|inst_sll_w | inst_srl_w | inst_sra_w|
-                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrrd | inst_csrwr | inst_csrxchg;
+                          inst_mul_w | inst_mulh_w | inst_mulh_wu| inst_div_w | inst_mod_w | inst_div_wu | inst_mod_wu | inst_csrwr | inst_csrxchg;
 
     //指令不存在
     assign id_ine = ~ ( inst_add_w     | inst_sub_w   | inst_slt     | inst_sltu      |
