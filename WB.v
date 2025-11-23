@@ -89,7 +89,7 @@ module WB (
         rf_we, rf_waddr, rf_wdata, csr_re
     };
     assign wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
-    assign wb_esubcode = wb_ex_id ? wb_esubcode : 9'b0;  // syscall没有子编码
+    assign wb_esubcode = wb_ex_id ? `ESUBCODE_ADEF : 9'b0;  // syscall没有子编码
     assign wb_csr_pc = wb_pc;
     assign ertn_flush = wb_valid & wb_ertn;
     //csr
