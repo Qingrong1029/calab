@@ -205,7 +205,9 @@ module EX (
                                                  4'b1100
                     ) : inst_st_w ? 4'b1111 : 4'b0000
                 ) : 4'b0000;  // ERTN flush 时禁止写
-    assign  data_sram_size = inst_st_h ? 2'h1 : inst_st_w ? 2'h2 : 2'h0;
+    assign  data_sram_size = (mem_type[1:0] == 2'b01) ? 2'h1 : 
+                             (mem_type[1:0] == 2'b11) ? 2'h2 : 
+                              2'h0;
     assign  data_sram_addr = alu_result[31:0];
     assign  data_sram_wdata = st_data;
     assign  ex_mem_bus = {
