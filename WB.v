@@ -133,7 +133,7 @@ module WB (
 );
 
     reg             wb_valid;
-    reg     [231:0] mem_wb_bus_vld;
+    reg     [241:0] mem_wb_bus_vld;
     wire            wb_ready_go;
     wire            wb_gr_we;
     wire            rf_we;
@@ -158,32 +158,53 @@ module WB (
     wire    [ 8:0]  wb_esubcode;      // 异常子码
     wire    [ 8:0]  wb_esubcode_tmp;      // 异常子码
     wire    [ 5:0]  wb_ecode;         // 异常编码
-    
-    assign tlbsrch_got = ws_s1_found;
-    assign tlbsrch_index = ws_s1_index;
+    wire            wb_syscall_ex;
+    wire            inst_tlbwr;
+    wire            inst_tlbfill;
+    wire            inst_invtlb;
+    wire            s1_found;
+    wire    [ 3:0]  s1_index;
+
+    assign lbsrch_got = s1_found;
+    assign tlbsrch_index = s1_index;
     
     //for tlbrd
-    assign inst_tlbrd = ws_inst_tlbrd;
     assign tlbrd_valid = r_e;
     assign r_index = tlbidx_index;
+    assign tlbrd_tlbehi_vppn = r_vppn;
+    assign tlbrd_tlbelo0_ppn = r_ppn0;
+    assign tlbrd_tlbelo0_g   = r_g;
+    assign tlbrd_tlbelo0_mat = r_mat0;
+    assign tlbrd_tlbelo0_plv = r_plv0;
+    assign tlbrd_tlbelo0_d   = r_d0;
+    assign tlbrd_tlbelo0_v   = r_v0;
+    assign tlbrd_tlbelo1_ppn = r_ppn1;
+    assign tlbrd_tlbelo1_g   = r_g;
+    assign tlbrd_tlbelo1_mat = r_mat1;
+    assign tlbrd_tlbelo1_plv = r_plv1;
+    assign tlbrd_tlbelo1_d   = r_d1;
+    assign tlbrd_tlbelo1_v   = r_v1;
+    assign tlbrd_tlbidx_ps   = r_ps;
+    assign tlbrd_asid_asid   = r_asid;
+
     //for tlbwr
     reg [3:0] random_index;
     reg if_keep;
     
     always @(posedge clk)
         begin
-            if(reset)
+            if(resetn == 1'b0)
                 random_index <= 0;
-            else if(ws_inst_tlbfill && ms_to_ws_valid)
+            else if(inst_tlbfill && wb_valid)
             //prepare next random for next tlbfill inst
-                random_index <= ( {$random()} % 16 );
+                random_index <= random_index + 1;
         end
     assign we = (inst_tlbwr | inst_tlbfill);
-    assign w_index = ws_inst_invtlb ? tlbsrch_index : ws_inst_tlbwr ? tlbidx_index : random_index;
+    assign w_index = inst_invtlb ? tlbsrch_index : inst_tlbwr ? tlbidx_index : random_index;
     assign w_e = (stat_ecode != 6'h3f)? ~tlbidx_ne: 1'b1;
     assign w_vppn = tlbehi_vppn;
     assign w_ps = tlbidx_ps;
-    assign w_asid = ws_inst_invtlb ? ws_s1_asid : tlbasid_asid;
+    assign w_asid = tlbasid_asid;
     assign w_g = tlbelo0_g && tlbelo1_g; 
    
     assign w_ppn0 = tlbelo0_ppn;
@@ -197,6 +218,11 @@ module WB (
     assign w_mat1 = tlbelo1_mat;
     assign w_d1   = tlbelo1_d;
     assign w_v1   = tlbelo1_v;
+
+    assign tlb_reflush        = 1'b0;
+    assign tlb_reflush_pc     = 32'b0;
+    assign out_ex_tlb_refill  = 1'b0;
+    assign if_ws_crush_with_tlbsrch = 1'b0;
     
     assign wb_ready_go = 1'b1;
     assign wb_allowin = wb_ready_go | ~wb_valid;
