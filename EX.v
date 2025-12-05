@@ -5,12 +5,12 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [332:0] id_ex_bus,
+    input   [374:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
     input           wb_ex,
-    output  [239:0] ex_mem_bus,
+    output  [249:0] ex_mem_bus,
 
     output          data_sram_req,
     output          data_sram_wr,
@@ -25,7 +25,52 @@ module EX (
     input           mem_ex,
     input           mem_ertn,
     input           ertn_flush,
-    output          reg_ex
+    output          reg_ex,
+    
+    //port with tlb.v
+    output  [18:0]  s1_vppn,
+    output          s1_va_bit12,
+    output  [ 9:0]  s1_asid,
+
+    input           s1_found,
+    input   [ 3:0]  s1_index,
+
+    //tlb add
+    input   [18:0]  tlbehi_vppn,
+    input   [ 9:0]  tlbasid_asid,
+
+    //tlb crush
+    input        if_mem_crush_tlbsrch,
+    input        if_wb_crush_tlbsrch,
+    input        tlb_reflush,
+
+    //for translate
+    input crmd_da,
+    input crmd_pg,
+
+    input [1:0] plv,
+    input [1:0] datm,
+
+    input DMW0_PLV0,
+    input DMW0_PLV3,
+    input [1:0] DMW0_MAT,
+    input [2:0] DMW0_PSEG,
+    input [2:0] DMW0_VSEG,
+
+    input DMW1_PLV0,        
+    input DMW1_PLV3,       
+    input [1:0] DMW1_MAT,  
+    input [2:0] DMW1_PSEG,  
+    input [2:0] DMW1_VSEG,
+
+    //input s1_found,
+    input [19:0] s1_ppn,
+    input [1:0] s1_plv,
+    input s1_d,
+    input s1_v,
+
+    output invtlb_valid,
+    output [4:0] invtlb_op
 
 );
     //exp13
@@ -42,7 +87,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [332:0] id_ex_bus_vld;
+    reg     [374:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
@@ -92,6 +137,7 @@ module EX (
     wire    [31:0]  alu_src2;
     wire    [ 4:0]  ex_dest;
     wire    [31:0]  rkd_value;
+    wire    [31:0]  rj_value;
     wire    [31:0]  st_data;
     //csr exp12
     wire            ex_csr_we;
@@ -113,14 +159,22 @@ module EX (
     wire            ex_ex;            // 异常信号
     wire    [ 8:0]  ex_esubcode;      // 异常子码
     wire    [ 5:0]  ex_ecode;         // 异常编码
-    wire    [5:0]   final_ecode;
+    wire    [ 5:0]  final_ecode;
     wire            final_ex;
     
+    wire            inst_tlbsrch;
+    wire            inst_tlbrd;
+    wire            inst_tlbwr;
+    wire            inst_tlbfill;
+    wire            inst_invtlb;
+    wire    [ 4:0]  inst_invtlb_op;
+
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
-        ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
+        ex_dest, rkd_value, rj_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
+        ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode,
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op
     } = id_ex_bus_vld;
 
     alu my_alu (    
@@ -191,6 +245,64 @@ module EX (
         end 
     end
     
+    assign s1_vppn = (inst_tlbsrch) ? tlbehi_vppn:
+                      (inst_invtlb) ? rkd_value[31:13] : alu_result[31:13];        
+    assign s1_va_bit12 = alu_result[12];
+    assign s1_asid = (inst_tlbsrch) ? tlbasid_asid : 
+                      (inst_invtlb) ? rj_value[9:0] : tlbasid_asid;
+    assign invtlb_valid = inst_invtlb;
+    assign invtlb_op    = inst_invtlb_op;
+    
+    wire [31:0] address_dt;
+    assign address_dt = alu_result;
+    
+    wire [31:0] address_dmw0;
+    assign address_dmw0 = {DMW0_PSEG, alu_result[28:0]};
+    
+    wire [31:0] address_dmw1;
+    assign address_dmw1 = {DMW1_PSEG, alu_result[28:0]};
+    
+    wire [31:0] address_ptt;
+    assign address_ptt = {s1_ppn, alu_result[11:0]};
+    
+    wire if_dt;
+    assign if_dt = crmd_da & ~crmd_pg;
+    
+    wire if_indt;
+    assign if_indt = ~crmd_da & crmd_pg;
+    
+    wire if_dmw0;
+    assign if_dmw0 = ((plv == 0 && DMW0_PLV0) || (plv == 3 && DMW0_PLV3)) &&
+                    (datm == DMW0_MAT) && (alu_result[31:29] == DMW0_VSEG);
+                    
+    wire if_dmw1;
+    assign if_dmw1 = ((plv == 0 && DMW1_PLV0) || (plv == 3 && DMW1_PLV3)) &&
+                    (datm == DMW1_MAT) && (alu_result[31:29] == DMW1_VSEG);
+    
+    wire [31:0] address_p;
+    assign address_p = if_dt ? address_dt : if_indt ?
+                (if_dmw0 ? address_dmw0 : if_dmw1 ? address_dmw1 : address_ptt) : 0;
+                
+    wire es_ex_loadstore_tlb_fill;
+    wire es_ex_load_invalid;
+    wire es_ex_store_invalid;
+    wire es_ex_loadstore_plv_invalid;
+    wire es_ex_store_dirty;
+    
+    wire if_ppt;
+    assign if_ppt = if_indt & ~(if_dmw0 | if_dmw1);
+    
+    assign es_ex_loadstore_tlb_fill = if_ppt & (res_from_mem | ex_gr_we) & ~s1_found;
+    assign es_ex_load_invalid = if_ppt & res_from_mem & s1_found & ~s1_v;
+    assign es_ex_store_invalid = if_ppt & ex_gr_we & s1_found & ~s1_v;
+    assign es_ex_loadstore_plv_invalid = if_ppt & (res_from_mem | ex_gr_we) & s1_found
+                                    & s1_v & (plv > s1_plv);
+    assign es_ex_store_dirty = if_ppt & ex_gr_we & s1_found & s1_v & ~s1_d & 
+                            (plv == 2'b00 || (plv == 2'b01 &&(s1_plv == 2'b01 || s1_plv == 2'b10 || s1_plv == 2'b11)) ||
+                            (plv == 2'b10 &&( s1_plv == 2'b10 || s1_plv == 2'b11)) ||
+                            (plv == 2'b11 &&(s1_plv == 2'b11)) );
+
+    
     assign data_sram_req = ((|ex_load_op) | (|ex_store_op)) & ex_valid & mem_allowin &
                     ~wb_ex & ~ertn_flush & ~reg_ex & ~addr_ok_reg;
     assign data_sram_wr = (|data_sram_wstrb) & ex_valid & ~wb_ex & ~mem_ex & ~final_ex;
@@ -213,7 +325,8 @@ module EX (
     assign  ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
         ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
-        ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode
+        ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode,
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index
     };
 
     // 添加异常优先级处理逻辑
