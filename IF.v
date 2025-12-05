@@ -5,10 +5,10 @@ module IF (
     input           id_allowin,
     
     output          if_id_valid,
-    output  [96:0]  if_id_bus,
+    output [112:0]  if_id_bus,
     input   [33:0]  id_if_bus,
     input           wb_ex,
-    
+
     output          inst_sram_req,
     output          inst_sram_wr,
     output  [ 1:0]  inst_sram_size,
@@ -21,8 +21,35 @@ module IF (
 
     input           ertn_flush,
     input   [31:0]  ex_entry,
-    input   [31:0]  ertn_entry
+    input   [31:0]  ertn_entry,
+
+    // tlb interface
+    output  [18:0]  s0_vppn,
+    output          s0_va_bit12,
+    input           tlb_enable,
+    input           s0_found,
+    input   [19:0]  s0_ppn,
+    input   [5:0]   s0_ps,
+    input   [1:0]   s0_plv,
+    input   [1:0]   s0_mat,
+    input           s0_d,
+    input           s0_v,
+    input   [1:0]   csr_plv
 );
+    function [31:0] tlb_offset_mask;
+        input [5:0] ps;
+        integer     i;
+        reg [5:0]   eff_ps;
+        begin
+            eff_ps = (ps < 6'd12) ? 6'd12 : ps;
+            tlb_offset_mask = 32'b0;
+            for (i = 0; i < 32; i = i + 1) begin
+                if (i < eff_ps)
+                    tlb_offset_mask[i] = 1'b1;
+            end
+        end
+    endfunction
+
     reg             if_valid;
     wire            if_ready_go;
     wire            pre_if_ready_go;
@@ -36,6 +63,9 @@ module IF (
     wire    [31:0]  seq_pc;
     wire            if_adef;
     wire    [31:0]  if_wrong_addr;
+    wire            if_tlb_ex;
+    wire    [5:0]   if_tlb_ecode;
+    wire    [8:0]   if_tlb_esubcode;
     
     reg             wb_ex_reg;
     reg             ertn_flush_reg;
@@ -50,6 +80,12 @@ module IF (
     reg     [31:0]  inst_buffer;
     reg             inst_buffer_valid;
     reg             discard_next_data;
+
+    wire [31:0]     if_pa;
+    wire            if_tlb_use;
+    wire            if_tlb_hit;
+    wire [5:0]      if_ps_eff;
+    wire [31:0]     if_offset_mask;
     
     assign  pre_if_ready_go = inst_sram_req & inst_sram_addr_ok;
     
@@ -106,7 +142,7 @@ module IF (
         end
     end
     assign  if_id_valid =  if_valid && if_ready_go && ~cancel_req;
-    assign  if_id_bus = {if_adef,if_wrong_addr,if_pc, if_inst};
+    assign  if_id_bus = {if_adef, if_tlb_ex, if_tlb_ecode, if_tlb_esubcode, if_wrong_addr, if_pc, if_inst};
        
     assign  if_adef = if_nextpc[1] | if_nextpc[0];
     assign  if_wrong_addr = if_nextpc;
@@ -170,10 +206,22 @@ module IF (
     end
     
     assign  inst_sram_req   = ~req_accepted & ~br_stall & if_allowin ;
-    assign  inst_sram_addr  = if_nextpc;
+    assign  inst_sram_addr  = if_tlb_use ? if_pa : if_nextpc;
     assign  inst_sram_wr    = 1'b0;
     assign  inst_sram_size  = 2'b10;
     assign  inst_sram_wstrb = 4'b0;
     assign  inst_sram_wdata = 32'b0;
+
+    assign  s0_vppn = if_nextpc[31:13];
+    assign  s0_va_bit12 = if_nextpc[12];
+    assign  if_tlb_use = tlb_enable;
+    assign  if_ps_eff = (s0_ps < 6'd12) ? 6'd12 : s0_ps;
+    assign  if_offset_mask = tlb_offset_mask(if_ps_eff);
+    assign  if_pa = ({s0_ppn, 12'b0}) | (if_nextpc & if_offset_mask);
+    assign  if_tlb_hit = s0_found & s0_v;
+
+    assign  if_tlb_ex = if_tlb_use & ~if_tlb_hit;
+    assign  if_tlb_ecode = 6'b0;
+    assign  if_tlb_esubcode = 9'b0;
 endmodule
 

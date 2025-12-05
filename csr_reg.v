@@ -23,6 +23,8 @@ module csr_reg (
     output  wire [31:0] ertn_entry,
     output wire [31:0] ex_entry,
     output wire        has_int,
+    output wire [1:0]  csr_crmd_plv_o,
+    output wire [9:0]  csr_asid_value,
     
     input  wire [7:0]  hw_int_in,
     input              ipi_int_in,
@@ -61,6 +63,10 @@ module csr_reg (
     // SAVE 寄存器
     reg [31:0] csr_save0, csr_save1, csr_save2, csr_save3;
     
+    // ASID
+    reg [9:0] csr_asid_asid;
+    reg [7:0] csr_asid_asidbits;
+
     // BADV (虚地址)
     reg [31:0] csr_badv_vaddr;
     
@@ -197,6 +203,19 @@ module csr_reg (
         if (csr_we && csr_num == `CSR_SAVE3)
             csr_save3 <= (csr_wmask & csr_wvalue) | (~csr_wmask & csr_save3);
     end
+
+    // ---------- ASID ----------
+    always @(posedge clk) begin
+        if (~resetn) begin
+            csr_asid_asid <= 10'b0;
+            csr_asid_asidbits <= 8'd0;
+        end else if (csr_we && csr_num == `CSR_ASID) begin
+            csr_asid_asid <= (csr_wmask[9:0] & csr_wvalue[9:0]) |
+                             (~csr_wmask[9:0] & csr_asid_asid);
+            csr_asid_asidbits <= (csr_wmask[23:16] & csr_wvalue[23:16]) |
+                                  (~csr_wmask[23:16] & csr_asid_asidbits);
+        end
+    end
     
     // ---------- TID ----------
     always @(posedge clk) begin
@@ -268,6 +287,7 @@ module csr_reg (
                         (csr_num==`CSR_SAVE1)  ? csr_save1 :
                         (csr_num==`CSR_SAVE2)  ? csr_save2 :
                         (csr_num==`CSR_SAVE3)  ? csr_save3 :
+                        (csr_num==`CSR_ASID)   ? {csr_asid_asidbits, 6'b0, csr_asid_asid} :
                         (csr_num==`CSR_TID)    ? csr_tid_rvalue   :
                         (csr_num==`CSR_TCFG)   ? csr_tcfg_rvalue  :
                         (csr_num==`CSR_TVAL)   ? csr_tval_rvalue  : 32'b0;
@@ -277,6 +297,8 @@ module csr_reg (
     
     wire int_pending = |(csr_estat_is[11:0] & csr_ecfg_lie[11:0]);
     assign has_int = csr_crmd_ie && int_pending;
+    assign csr_crmd_plv_o = csr_crmd_plv;
+    assign csr_asid_value = csr_asid_asid;
 
 
 endmodule

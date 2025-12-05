@@ -6,7 +6,7 @@ module ID (
 
     input           if_id_valid,
     output          id_allowin,
-    input   [96:0]  if_id_bus,
+    input  [112:0]  if_id_bus,
     output  [33:0]  id_if_bus,
 
     input           ex_allowin,
@@ -27,9 +27,12 @@ module ID (
     wire            br_taken;
     wire            br_stall;
     wire    [31:0]  br_target;
-    reg     [96:0]  if_id_bus_vld;
+    reg    [112:0]  if_id_bus_vld;
     wire            wb_ex;
     wire            id_adef;
+    wire            id_tlb_ex;
+    wire    [5:0]   id_tlb_ecode;
+    wire    [8:0]   id_tlb_esubcode;
     wire    [31:0]  id_wrong_addr;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
@@ -88,7 +91,7 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_adef,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
+    assign {id_adef,id_tlb_ex,id_tlb_ecode,id_tlb_esubcode,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
     wire        src1_is_pc;
@@ -522,11 +525,13 @@ module ID (
 
     assign id_ertn_flush = inst_ertn & id_valid;
 
-    assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef);
+    assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef | id_tlb_ex);
     assign id_ecode = id_has_int   ? `ECODE_INT
+                    : id_tlb_ex    ? id_tlb_ecode
                     : id_adef      ? `ECODE_ADE
                     : id_ine       ? `ECODE_INE
                     : inst_break   ? `ECODE_BRK
                     : inst_syscall ? `ECODE_SYS : 6'b0;
-    assign id_esubcode = id_adef ? `ESUBCODE_ADEF : 9'b0;
+    assign id_esubcode = id_tlb_ex ? id_tlb_esubcode :
+                         id_adef ? `ESUBCODE_ADEF : 9'b0;
 endmodule

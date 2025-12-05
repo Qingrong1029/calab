@@ -29,7 +29,7 @@ module mycpu_sram(
 );
     wire            id_allowin;
     wire            if_id_valid;
-    wire    [ 96:0] if_id_bus;
+    wire   [112:0] if_id_bus;
     wire    [ 33:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
@@ -68,7 +68,52 @@ module mycpu_sram(
     wire            mem_ertn;
     wire            id_has_int;
     wire            reg_ex;
-    
+    wire    [1:0]   csr_crmd_plv;
+    wire   [18:0]   if_s0_vppn;
+    wire            if_s0_va_bit12;
+    wire            tlb_enable;
+    wire            s0_found;
+    wire   [19:0]   s0_ppn;
+    wire   [5:0]    s0_ps;
+    wire   [1:0]    s0_plv;
+    wire   [1:0]    s0_mat;
+    wire            s0_d;
+    wire            s0_v;
+    wire   [18:0]   ex_s1_vppn;
+    wire            ex_s1_va_bit12;
+    wire            s1_found;
+    wire   [19:0]   s1_ppn;
+    wire   [5:0]    s1_ps;
+    wire   [1:0]    s1_plv;
+    wire   [1:0]    s1_mat;
+    wire            s1_d;
+    wire            s1_v;
+    wire   [9:0]    tlb_asid_value;
+
+    localparam      TLBNUM = 16;
+    localparam      TLBNUM_IDX_WIDTH = (TLBNUM <= 1) ? 1 : $clog2(TLBNUM);
+    wire [TLBNUM_IDX_WIDTH-1:0] tlb_s0_index_unused;
+    wire [TLBNUM_IDX_WIDTH-1:0] tlb_s1_index_unused;
+    wire [TLBNUM_IDX_WIDTH-1:0] tlb_r_index;
+    wire                        tlb_r_e;
+    wire [18:0]                 tlb_r_vppn;
+    wire [5:0]                  tlb_r_ps;
+    wire [9:0]                  tlb_r_asid;
+    wire                        tlb_r_g;
+    wire [19:0]                 tlb_r_ppn0;
+    wire [1:0]                  tlb_r_plv0;
+    wire [1:0]                  tlb_r_mat0;
+    wire                        tlb_r_d0;
+    wire                        tlb_r_v0;
+    wire [19:0]                 tlb_r_ppn1;
+    wire [1:0]                  tlb_r_plv1;
+    wire [1:0]                  tlb_r_mat1;
+    wire                        tlb_r_d1;
+    wire                        tlb_r_v1;
+
+    assign tlb_enable = 1'b1;
+    assign tlb_r_index = {TLBNUM_IDX_WIDTH{1'b0}};
+
     IF my_IF (
         .clk                (clk),
         .resetn             (resetn),
@@ -88,7 +133,18 @@ module mycpu_sram(
         .ertn_flush         (ertn_flush),
         .ertn_entry         (ertn_entry),
         .wb_ex              (wb_ex),
-        .ex_entry           (ex_entry)
+        .ex_entry           (ex_entry),
+        .s0_vppn            (if_s0_vppn),
+        .s0_va_bit12        (if_s0_va_bit12),
+        .tlb_enable         (tlb_enable),
+        .s0_found           (s0_found),
+        .s0_ppn             (s0_ppn),
+        .s0_ps              (s0_ps),
+        .s0_plv             (s0_plv),
+        .s0_mat             (s0_mat),
+        .s0_d               (s0_d),
+        .s0_v               (s0_v),
+        .csr_plv            (csr_crmd_plv)
     );
     ID my_ID (
         .clk                (clk),
@@ -129,7 +185,18 @@ module mycpu_sram(
         .mem_ex             (mem_ex),
         .mem_ertn           (mem_ertn),
         .wb_ex              (wb_ex | ertn_flush),
-        .reg_ex             (reg_ex)
+        .reg_ex             (reg_ex),
+        .s1_vppn            (ex_s1_vppn),
+        .s1_va_bit12        (ex_s1_va_bit12),
+        .tlb_enable         (tlb_enable),
+        .s1_found           (s1_found),
+        .s1_ppn             (s1_ppn),
+        .s1_ps              (s1_ps),
+        .s1_plv             (s1_plv),
+        .s1_mat             (s1_mat),
+        .s1_d               (s1_d),
+        .s1_v               (s1_v),
+        .csr_plv            (csr_crmd_plv)
     );
     MEM my_MEM (
         .clk                (clk),
@@ -198,7 +265,69 @@ module mycpu_sram(
         
         .has_int            (has_int),
         .hw_int_in          (hw_int_in),
-        .ipi_int_in         (ipi_int_in)
+        .ipi_int_in         (ipi_int_in),
+        .csr_crmd_plv_o     (csr_crmd_plv),
+        .csr_asid_value     (tlb_asid_value)
         
+    );
+    tlb u_tlb (
+        .clk         (clk),
+        .s0_vppn     (if_s0_vppn),
+        .s0_va_bit12 (if_s0_va_bit12),
+        .s0_asid     (tlb_asid_value),
+        .s0_found    (s0_found),
+        .s0_index    (tlb_s0_index_unused),
+        .s0_ppn      (s0_ppn),
+        .s0_ps       (s0_ps),
+        .s0_plv      (s0_plv),
+        .s0_mat      (s0_mat),
+        .s0_d        (s0_d),
+        .s0_v        (s0_v),
+        .s1_vppn     (ex_s1_vppn),
+        .s1_va_bit12 (ex_s1_va_bit12),
+        .s1_asid     (tlb_asid_value),
+        .s1_found    (s1_found),
+        .s1_index    (tlb_s1_index_unused),
+        .s1_ppn      (s1_ppn),
+        .s1_ps       (s1_ps),
+        .s1_plv      (s1_plv),
+        .s1_mat      (s1_mat),
+        .s1_d        (s1_d),
+        .s1_v        (s1_v),
+        .invtlb_valid(1'b0),
+        .invtlb_op   (5'b0),
+        .we          (1'b0),
+        .w_index     ({TLBNUM_IDX_WIDTH{1'b0}}),
+        .w_e         (1'b0),
+        .w_vppn      (19'b0),
+        .w_ps        (6'b0),
+        .w_asid      (10'b0),
+        .w_g         (1'b0),
+        .w_ppn0      (20'b0),
+        .w_plv0      (2'b0),
+        .w_mat0      (2'b0),
+        .w_d0        (1'b0),
+        .w_v0        (1'b0),
+        .w_ppn1      (20'b0),
+        .w_plv1      (2'b0),
+        .w_mat1      (2'b0),
+        .w_d1        (1'b0),
+        .w_v1        (1'b0),
+        .r_index     (tlb_r_index),
+        .r_e         (tlb_r_e),
+        .r_vppn      (tlb_r_vppn),
+        .r_ps        (tlb_r_ps),
+        .r_asid      (tlb_r_asid),
+        .r_g         (tlb_r_g),
+        .r_ppn0      (tlb_r_ppn0),
+        .r_plv0      (tlb_r_plv0),
+        .r_mat0      (tlb_r_mat0),
+        .r_d0        (tlb_r_d0),
+        .r_v0        (tlb_r_v0),
+        .r_ppn1      (tlb_r_ppn1),
+        .r_plv1      (tlb_r_plv1),
+        .r_mat1      (tlb_r_mat1),
+        .r_d1        (tlb_r_d1),
+        .r_v1        (tlb_r_v1)
     );
 endmodule
