@@ -10,17 +10,19 @@ module MEM (
     input           wb_allowin,
     output  [231:0] mem_wb_bus,
 
-    input   [ 31:0] data_sram_rdata,
+    input           data_sram_data_ok,
+    input   [31:0]  data_sram_rdata,
     input           wb_ex,
   
 
-    output  [ 53:0] mem_id_bus,
+    output  [ 54:0] mem_id_bus,
     output          mem_ex,
-    input           ertn_flush
+    output          mem_ertn,
+    input           ertn_flush,
+    input           reg_ex
 );
 
     reg             mem_valid;
-    wire            wb_ex;
     wire            mem_ready_go;
     wire    [ 31:0] mem_pc;
     wire    [ 31:0] mem_inst;
@@ -45,41 +47,50 @@ module MEM (
     wire    [13:0]  mem_csr_num;
     wire    [31:0]  mem_csr_wmask;
     wire    [31:0]  mem_csr_wvalue;
-    wire            mem_ertn;
-    wire            ertn_flush;
     wire            mem_syscall_ex;
-    wire            mem_ex;
     wire            mem_ale;           // ALE异常
     wire            mem_adef;          // ADEF异常  
-    wire    [31:0]  mem_wrong_addr;    // 错误地址
     wire            mem_ertn_flush;    // ERTN刷新
     wire            mem_ex_id;         // 从ID传来的异常
     wire    [ 8:0]  mem_esubcode;      // 异常子码
     wire    [ 5:0]  mem_ecode;         // 异常编码
     
-    assign halfword_data = (mem_addr_low2[1] == 1'b0) ? data_sram_rdata[15:0] : data_sram_rdata[31:16];
-
-    assign byte_data = (mem_addr_low2 == 2'b00) ? data_sram_rdata[7:0] :
-                       (mem_addr_low2 == 2'b01) ? data_sram_rdata[15:8] :
-                       (mem_addr_low2 == 2'b10) ? data_sram_rdata[23:16] :
-                                                  data_sram_rdata[31:24];
-
-    assign selected_data = (mem_type[1:0] == 2'b00) ? data_sram_rdata :  // word
-                           (mem_type[1:0] == 2'b01) ? {16'b0, halfword_data} :  // halfword
-                                                      {24'b0, byte_data};  // byte
+    wire            cancel_req = wb_ex | ertn_flush;
     
-    wire [31:0] sign_extended_half = {{16{halfword_data[15]}}, halfword_data};
-    wire [31:0] sign_extended_byte = {{24{byte_data[7]}}, byte_data};
-    wire [31:0] zero_extended_half = {16'b0, halfword_data};
-    wire [31:0] zero_extended_byte = {24'b0, byte_data};
+    reg             discard_next_data;
+    
+    always @(posedge clk) begin
+        if (~resetn) begin
+            discard_next_data <= 1'b0;
+        end else if (cancel_req && mem_valid && !mem_ready_go) begin
+            discard_next_data <= 1'b1;
+        end else if (data_sram_data_ok && discard_next_data) begin
+            discard_next_data <= 1'b0;
+        end
+    end
 
-    assign extended_data = (mem_type[1:0] == 2'b00) ? selected_data :  // ld.w: 直接使用
-                       (mem_type == 3'b001) ? sign_extended_half :  // ld.h: 半字符号扩展
-                       (mem_type == 3'b010) ? sign_extended_byte :  // ld.b: 字节符号扩展
-                       (mem_type == 3'b101) ? zero_extended_half :  // ld.hu: 半字零扩展
-                       zero_extended_byte;  // ld.bu: 字节零扩展
+    reg [31:0]  mem_data_buffer;
+    reg         mem_data_buffer_valid;
 
-    assign  mem_ready_go = 1'b1;
+    always @(posedge clk) begin
+        if (~resetn) begin
+            mem_data_buffer <= 32'b0;
+            mem_data_buffer_valid <= 1'b0;
+        end else if (cancel_req) begin
+            mem_data_buffer_valid <= 1'b0;
+        end else if (data_sram_data_ok && !discard_next_data && 
+                     !mem_data_buffer_valid && !wb_allowin) begin
+            mem_data_buffer <= data_sram_rdata;
+            mem_data_buffer_valid <= 1'b1;
+        end else if (mem_data_buffer_valid && mem_ready_go && wb_allowin) begin
+            mem_data_buffer_valid <= 1'b0;
+        end
+    end
+
+    wire [31:0] mem_rdata = mem_data_buffer_valid ? mem_data_buffer : data_sram_rdata;
+    
+    assign  mem_ready_go = |mem_type ? 
+                         (((data_sram_data_ok | mem_data_buffer_valid) && !discard_next_data) | reg_ex) : 1'b1;
     assign  mem_wb_valid = mem_ready_go & mem_valid & ~wb_ex & ~ertn_flush;
     assign  mem_allowin = mem_wb_valid & wb_allowin | ~mem_valid;
     always @(posedge clk ) begin
@@ -101,19 +112,43 @@ module MEM (
             ex_mem_bus_vld <= ex_mem_bus;
         end
     end
+    
+        
+    assign halfword_data = (mem_addr_low2[1] == 1'b0) ? mem_rdata[15:0] : mem_rdata[31:16];
 
+    assign byte_data = (mem_addr_low2 == 2'b00) ? mem_rdata[7:0] :
+                       (mem_addr_low2 == 2'b01) ? mem_rdata[15:8] :
+                       (mem_addr_low2 == 2'b10) ? mem_rdata[23:16] :
+                                                  mem_rdata[31:24];
+
+    assign selected_data = (mem_type[1:0] == 2'b11) ? mem_rdata :  // word
+                           (mem_type[1:0] == 2'b01) ? {16'b0, halfword_data} :  // halfword
+                                                      {24'b0, byte_data};  // byte
+    
+    wire [31:0] sign_extended_half = {{16{halfword_data[15]}}, halfword_data};
+    wire [31:0] sign_extended_byte = {{24{byte_data[7]}}, byte_data};
+    wire [31:0] zero_extended_half = {16'b0, halfword_data};
+    wire [31:0] zero_extended_byte = {24'b0, byte_data};
+
+    assign extended_data = (mem_type[1:0] == 2'b11) ? selected_data :  // ld.w: 直接使用
+                           (mem_type == 3'b001)     ? sign_extended_half :  // ld.h: 半字符号扩展
+                           (mem_type == 3'b010)     ? sign_extended_byte :  // ld.b: 字节符号扩展
+                           (mem_type == 3'b101)     ? zero_extended_half :  // ld.hu: 半字零扩展
+                                                      zero_extended_byte;  // ld.bu: 字节零扩展
 
     assign {
         mem_gr_we, res_from_mem, mem_type, mem_addr_low2,
-        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex_id, mem_esubcode, mem_ecode
+        mem_dest, mem_pc, mem_inst, alu_result, mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn,
+        mem_syscall_ex,mem_wrong_addr,mem_ale, mem_adef, mem_ex_id, mem_esubcode, mem_ecode
     } = ex_mem_bus_vld;
     assign  final_result = res_from_mem ? extended_data : alu_result;
-    assign mem_ex= mem_valid & mem_ex_id;
+    assign  mem_ex= mem_valid & mem_ex_id;
     assign  mem_wb_bus = {
         mem_gr_we, mem_pc, mem_inst, final_result, mem_dest,
-        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn, mem_syscall_ex, mem_wrong_addr,mem_ex, mem_esubcode, mem_ecode
+        mem_csr_we, mem_csr_re, mem_csr_num, mem_csr_wmask, mem_csr_wvalue, mem_ertn, mem_syscall_ex, 
+        mem_wrong_addr,mem_ex, mem_esubcode, mem_ecode
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
     
-    assign  mem_id_bus = {mem_bypass , mem_dest , final_result , mem_gr_we, mem_csr_re , mem_csr_num};
+    assign  mem_id_bus = {mem_bypass , res_from_mem & mem_valid , mem_dest , final_result , mem_gr_we, mem_csr_re & mem_valid, mem_csr_num};
 endmodule
