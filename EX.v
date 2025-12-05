@@ -27,7 +27,7 @@ module EX (
     input           ertn_flush,
     output          reg_ex,
     
-        //port with tlb.v
+    //port with tlb.v
     output  [18:0]  s1_vppn,
     output          s1_va_bit12,
     output  [ 9:0]  s1_asid,
@@ -40,8 +40,8 @@ module EX (
     input   [ 9:0]  tlbasid_asid,
 
     //tlb crush
-    input        if_ms_crush_with_tlbsrch,
-    input        if_ws_crush_with_tlbsrch,
+    input        if_mem_crush_tlbsrch,
+    input        if_wb_crush_tlbsrch,
     input        tlb_reflush,
 
     //for translate
@@ -252,6 +252,56 @@ module EX (
                       (inst_invtlb) ? rj_value[9:0] : tlbasid_asid;
     assign invtlb_valid = inst_invtlb;
     assign invtlb_op    = inst_invtlb_op;
+    
+    wire [31:0] address_dt;
+    assign address_dt = alu_result;
+    
+    wire [31:0] address_dmw0;
+    assign address_dmw0 = {DMW0_PSEG, alu_result[28:0]};
+    
+    wire [31:0] address_dmw1;
+    assign address_dmw1 = {DMW1_PSEG, alu_result[28:0]};
+    
+    wire [31:0] address_ptt;
+    assign address_ptt = {s1_ppn, alu_result[11:0]};
+    
+    wire if_dt;
+    assign if_dt = crmd_da & ~crmd_pg;
+    
+    wire if_indt;
+    assign if_indt = ~crmd_da & crmd_pg;
+    
+    wire if_dmw0;
+    assign if_dmw0 = ((plv == 0 && DMW0_PLV0) || (plv == 3 && DMW0_PLV3)) &&
+                    (datm == DMW0_MAT) && (alu_result[31:29] == DMW0_VSEG);
+                    
+    wire if_dmw1;
+    assign if_dmw1 = ((plv == 0 && DMW1_PLV0) || (plv == 3 && DMW1_PLV3)) &&
+                    (datm == DMW1_MAT) && (alu_result[31:29] == DMW1_VSEG);
+    
+    wire [31:0] address_p;
+    assign address_p = if_dt ? address_dt : if_indt ?
+                (if_dmw0 ? address_dmw0 : if_dmw1 ? address_dmw1 : address_ptt) : 0;
+                
+    wire es_ex_loadstore_tlb_fill;
+    wire es_ex_load_invalid;
+    wire es_ex_store_invalid;
+    wire es_ex_loadstore_plv_invalid;
+    wire es_ex_store_dirty;
+    
+    wire if_ppt;
+    assign if_ppt = if_indt & ~(if_dmw0 | if_dmw1);
+    
+    assign es_ex_loadstore_tlb_fill = if_ppt & (res_from_mem | ex_gr_we) & ~s1_found;
+    assign es_ex_load_invalid = if_ppt & res_from_mem & s1_found & ~s1_v;
+    assign es_ex_store_invalid = if_ppt & ex_gr_we & s1_found & ~s1_v;
+    assign es_ex_loadstore_plv_invalid = if_ppt & (res_from_mem | ex_gr_we) & s1_found
+                                    & s1_v & (plv > s1_plv);
+    assign es_ex_store_dirty = if_ppt & ex_gr_we & s1_found & s1_v & ~s1_d & 
+                            (plv == 2'b00 || (plv == 2'b01 &&(s1_plv == 2'b01 || s1_plv == 2'b10 || s1_plv == 2'b11)) ||
+                            (plv == 2'b10 &&( s1_plv == 2'b10 || s1_plv == 2'b11)) ||
+                            (plv == 2'b11 &&(s1_plv == 2'b11)) );
+
     
     assign data_sram_req = ((|ex_load_op) | (|ex_store_op)) & ex_valid & mem_allowin &
                     ~wb_ex & ~ertn_flush & ~reg_ex & ~addr_ok_reg;

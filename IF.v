@@ -21,7 +21,44 @@ module IF (
 
     input           ertn_flush,
     input   [31:0]  ex_entry,
-    input   [31:0]  ertn_entry
+    input   [31:0]  ertn_entry,
+    
+    input tlb_zombie,
+    input tlb_reflush,
+    input [31:0] tlb_reflush_pc,
+
+    //for translate
+    input crmd_da,
+    input crmd_pg,
+    input [1:0] crmd_datf,
+    input [1:0] crmd_datm,
+
+    input [1:0] plv,
+    input [1:0] datf,
+
+    input DMW0_PLV0,
+    input DMW0_PLV3,
+    input [1:0] DMW0_MAT,
+    input [2:0] DMW0_PSEG,
+    input [2:0] DMW0_VSEG,
+
+    input DMW1_PLV0,        
+    input DMW1_PLV3,       
+    input [1:0] DMW1_MAT,  
+    input [2:0] DMW1_PSEG,  
+    input [2:0] DMW1_VSEG,
+
+    input [9:0] tlbasid_asid,
+
+    output [18:0] s0_vppn,
+    output s0_va_bit12,
+    output [9:0] s0_asid,
+    input s0_found,
+    input [19:0] s0_ppn,
+    input [1:0] s0_plv,
+    input s0_v,
+
+    input in_ex_tlb_refill
 );
     reg             if_valid;
     wire            if_ready_go;
@@ -94,7 +131,7 @@ module IF (
 
     assign  if_ready_go = (inst_sram_data_ok | inst_buffer_valid ) & ~discard_next_data;
     assign  if_allowin = ~resetn | (if_ready_go & id_allowin) | cancel_req | ~if_valid;
-  always @(posedge clk) begin
+    always @(posedge clk) begin
         if(~resetn) begin
             if_valid <= 1'b0;
         end
@@ -106,7 +143,58 @@ module IF (
         end
     end
     assign  if_id_valid =  if_valid && if_ready_go && ~cancel_req;
-    assign  if_id_bus = {if_adef,if_wrong_addr,if_pc, if_inst};
+    
+    wire [31:0] next_pc_dt;
+    assign next_pc_dt = if_nextpc;
+    
+    wire [31:0] next_pc_dmw0;
+    assign next_pc_dmw0 = {DMW0_PSEG , if_nextpc[28:0]};
+    
+    wire [31:0] next_pc_dmw1;
+    assign next_pc_dmw1 = {DMW1_PSEG , if_nextpc[28:0]};
+    
+    wire [31:0] next_pc_ptt; //ppt --> page table translate
+    assign next_pc_ptt = {s0_ppn, if_nextpc[11:0]};
+    
+    //s0_vppn
+    assign s0_vppn = if_nextpc[31:13];
+    //s0_va_12bit
+    assign s0_va_bit12 = if_nextpc[12];
+    //s0_asid
+    assign s0_asid = tlbasid_asid;
+    
+    //choose next_pc
+    wire if_dt;
+    assign if_dt = crmd_da & ~crmd_pg;
+    
+    wire if_indt;
+    assign if_indt = ~crmd_da & crmd_pg;
+    
+    wire if_dmw0;
+    assign if_dmw0 = ((plv == 0 && DMW0_PLV0) || (plv == 3 && DMW0_PLV3)) &&
+                    (datf == DMW0_MAT) && (if_nextpc[31:29] == DMW0_VSEG);
+    
+    wire if_dmw1;
+    assign if_dmw1 = ((plv == 0 && DMW1_PLV0) || (plv == 3 && DMW1_PLV3)) &&
+                    (datf == DMW1_MAT) && (if_nextpc[31:29] == DMW1_VSEG);
+                    
+    wire [31:0] next_pc_p;
+    assign next_pc_p = if_dt ? next_pc_dt : if_indt ? 
+                (if_dmw0 ? next_pc_dmw0 : if_dmw1 ? next_pc_dmw1 : next_pc_ptt) : 0;
+    
+    wire if_ex_fetch_tlb_refill;
+    wire if_ex_inst_invalid;
+    wire if_ex_fetch_plv_invalid;
+    
+    wire if_ppt;
+    assign if_ppt = if_indt && ~(if_dmw0 | if_dmw1);
+    
+    assign if_ex_fetch_tlb_refill = if_ppt & ~s0_found;
+    assign if_ex_inst_invalid = if_ppt & s0_found & ~s0_v;
+    assign if_ex_fetch_plv_invalid = if_ppt & s0_found & s0_v & (plv > s0_plv);
+    
+    assign if_id_bus = {if_adef,if_wrong_addr,if_pc, if_inst,
+                        tlb_zombie, if_ex_fetch_tlb_refill, if_ex_inst_invalid, if_ex_fetch_plv_invalid};
        
     assign  if_adef = if_nextpc[1] | if_nextpc[0];
     assign  if_wrong_addr = if_nextpc;

@@ -18,7 +18,10 @@ module ID (
     input   [ 54:0] mem_id_bus,
     input   [ 55:0] ex_id_bus,
     input           ertn_flush,
-    input           id_has_int
+    input           id_has_int,
+    
+    output tlb_zombie,
+    input tlb_reflush
 );
     reg             id_valid;
     wire            id_ready_go;
@@ -554,4 +557,21 @@ module ID (
                     : inst_break   ? `ECODE_BRK
                     : inst_syscall ? `ECODE_SYS : 6'b0;
     assign id_esubcode = id_adef ? `ESUBCODE_ADEF : 9'b0;
+    
+    wire id_tlb_zombie;
+    wire id_ex_fetch_tlb_refill;
+    wire id_ex_inst_invalid;
+    wire id_ex_fetch_plv_invalid;
+    wire tlb_self_zombie;
+    
+    assign tlb_self_zombie = id_tlb_zombie;
+    
+    wire tlb_inst_zombie;
+    assign tlb_inst_zombie = inst_tlbwr | inst_tlbfill | inst_invtlb | inst_tlbrd;
+    
+    wire csr_inst_zombie;
+    assign csr_inst_zombie = (inst_csrwr | inst_csrxchg) && (ds_csr_num == `CSR_CRMD || 
+                        csr_num == `CSR_DMW0 || csr_num == `CSR_DMW1 || csr_num == `CSR_ASID);
+
+assign tlb_zombie = 0;
 endmodule

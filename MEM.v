@@ -19,7 +19,10 @@ module MEM (
     output          mem_ex,
     output          mem_ertn,
     input           ertn_flush,
-    input           reg_ex
+    input           reg_ex,
+    
+    output       if_mem_crush_tlbsrch,
+    input        tlb_reflush
 );
 
     reg             mem_valid;
@@ -159,6 +162,14 @@ module MEM (
         inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index
     };
     assign  mem_bypass = mem_valid & mem_gr_we;
-    
     assign  mem_id_bus = {mem_bypass , res_from_mem & mem_valid , mem_dest , final_result , mem_gr_we, mem_csr_re & mem_valid, mem_csr_num};
+    
+    wire if_csr_crush_tlbsrch;
+    assign if_csr_crush_with_tlbsrch = mem_csr_we && (mem_csr_num == `CSR_ASID 
+                                                   || mem_csr_num == `CSR_TLBEHI);
+    wire if_tlbrd_crush_tlbsrch;
+    assign if_tlbrd_crush_with_tlbsrch = inst_tlbrd;
+    assign if_mem_crush_tlbsrch = if_csr_crush_with_tlbsrch
+                                || if_tlbrd_crush_with_tlbsrch;
+
 endmodule
