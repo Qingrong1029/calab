@@ -65,7 +65,18 @@ module csr_reg (
     output wire [ 1:0] w_tlb_plv1,
     output wire [ 1:0] w_tlb_mat1,
     output wire        w_tlb_d1,
-    output wire        w_tlb_v1
+    output wire        w_tlb_v1,
+    output wire        crmd_da,
+    output wire        crmd_pg,
+    output wire [ 1:0] crmd_plv,
+    output wire [ 1:0] crmd_datf,
+    output wire [ 1:0] crmd_datm,
+    output wire [ 5:0] estat_ecode,
+    output wire [ 3:0] tlbidx_index,
+    output wire [ 5:0] tlbidx_ps,
+    output wire        tlbidx_ne,
+    output wire [18:0] tlbehi_vppn,
+    output wire [ 9:0] asid_asid
 );
 
     // ----------------------------------------
@@ -499,6 +510,18 @@ module csr_reg (
     assign w_tlb_mat1 = csr_tlbelo1_mat;
     assign w_tlb_d1   = csr_tlbelo1_d;
     assign w_tlb_v1   = csr_tlbelo1_v;
+
+    assign crmd_da   = csr_crmd_da;
+    assign crmd_pg   = csr_crmd_pg;
+    assign crmd_plv  = csr_crmd_plv;
+    assign crmd_datf = csr_crmd_datf;
+    assign crmd_datm = csr_crmd_datm;
+    assign estat_ecode = csr_estat_ecode;
+    assign tlbidx_index = csr_tlbidx_index;
+    assign tlbidx_ps    = csr_tlbidx_ps;
+    assign tlbidx_ne    = csr_tlbidx_ne;
+    assign tlbehi_vppn  = csr_tlbehi_vppn;
+    assign asid_asid    = csr_asid_asid;
 
 
 endmodule
