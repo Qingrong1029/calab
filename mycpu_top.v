@@ -108,8 +108,8 @@ mycpu_sram u_mycpu_sram(
 );
 
 transfer_axi_bridge u_transfer_axi_bridge(
-    .clk               (aclk             ),
-    .resetn            (aresetn          ),
+    .aclk               (aclk             ),
+    .aresetn            (aresetn          ),
 
     .arid              (arid             ),
     .araddr            (araddr           ),
@@ -152,25 +152,25 @@ transfer_axi_bridge u_transfer_axi_bridge(
     .bvalid            (bvalid           ),
     .bready            (bready           ),
 
-    .inst_req     (inst_sram_req    ),
-    .inst_wr      (inst_sram_wr     ),
-    .inst_size    (inst_sram_size   ),
-    .inst_wstrb   (inst_sram_wstrb  ),
-    .inst_addr    (inst_sram_addr   ),
-    .inst_wdata   (inst_sram_wdata  ),
-    .inst_rdata   (inst_sram_rdata  ),
-    .inst_addr_ok (inst_sram_addr_ok),
-    .inst_data_ok (inst_sram_data_ok),
+    .inst_sram_req     (inst_sram_req    ),
+    .inst_sram_wr      (inst_sram_wr     ),
+    .inst_sram_size    (inst_sram_size   ),
+    .inst_sram_wstrb   (inst_sram_wstrb  ),
+    .inst_sram_addr    (inst_sram_addr   ),
+    .inst_sram_wdata   (inst_sram_wdata  ),
+    .inst_sram_rdata   (inst_sram_rdata  ),
+    .inst_sram_addr_ok (inst_sram_addr_ok),
+    .inst_sram_data_ok (inst_sram_data_ok),
 
-    .data_req     (data_sram_req    ),
-    .data_wr      (data_sram_wr     ),
-    .data_wstrb   (data_sram_wstrb  ),
-    .data_size    (data_sram_size   ),
-    .data_addr    (data_sram_addr   ),
-    .data_wdata   (data_sram_wdata  ),
-    .data_rdata   (data_sram_rdata  ),
-    .data_addr_ok (data_sram_addr_ok),
-    .data_data_ok (data_sram_data_ok)
+    .data_sram_req     (data_sram_req    ),
+    .data_sram_wr      (data_sram_wr     ),
+    .data_sram_wstrb   (data_sram_wstrb  ),
+    .data_sram_size    (data_sram_size   ),
+    .data_sram_addr    (data_sram_addr   ),
+    .data_sram_wdata   (data_sram_wdata  ),
+    .data_sram_rdata   (data_sram_rdata  ),
+    .data_sram_addr_ok (data_sram_addr_ok),
+    .data_sram_data_ok (data_sram_data_ok)
 );
 
 endmodule

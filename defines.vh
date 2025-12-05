@@ -31,6 +31,7 @@
 `define CSR_SAVE6      14'h0036
 `define CSR_SAVE7      14'h0037
 
+//怎么我们本来就写了这个
 // ========== 其他 ==========
 `define CSR_TLBIDX     14'h0010
 `define CSR_TLBEHI     14'h0011
@@ -44,6 +45,7 @@
 `define CSR_PWCH       14'h001d
 `define CSR_STLBIDX    14'h001e
 `define CSR_RVACFG     14'h001f
+`define CSR_TLBRENTRY  14'h0024
 
 // ========== 常用宏 ==========
 `define CSR_MASK       14'h3fff   // CSR 地址掩码
@@ -93,3 +95,21 @@
 `define CSR_TICLR_CLR   0
 `define CSR_CPUID_COREID  8 :0
 `define CSR_CPUID_CPUTYPE 31:9
+
+// TLBIDX
+`define CSR_TLBIDX_INDEX    3:0
+`define CSR_TLBIDX_PS       29:24
+`define CSR_TLBIDX_NE       31
+// TLBEHI
+`define CSR_TLBEHI_VPPN     31:13
+// TLBELO0 TLBELO1
+`define CSR_TLBELO_V        0
+`define CSR_TLBELO_D        1
+`define CSR_TLBELO_PLV      3:2
+`define CSR_TLBELO_MAT      5:4
+`define CSR_TLBELO_G        6
+`define CSR_TLBELO_PPN      31:8
+// ASID
+`define CSR_ASID_ASID       9:0
+// TLBRENTRY
+`define CSR_TLBRENTRY_PA    31:6

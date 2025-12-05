@@ -6,12 +6,12 @@ module ID (
 
     input           if_id_valid,
     output          id_allowin,
-    input  [112:0]  if_id_bus,
+    input   [96:0]  if_id_bus,
     output  [33:0]  id_if_bus,
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [332:0] id_ex_bus,
+    output  [374:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
@@ -27,12 +27,9 @@ module ID (
     wire            br_taken;
     wire            br_stall;
     wire    [31:0]  br_target;
-    reg    [112:0]  if_id_bus_vld;
+    reg     [96:0]  if_id_bus_vld;
     wire            wb_ex;
     wire            id_adef;
-    wire            id_tlb_ex;
-    wire    [5:0]   id_tlb_ecode;
-    wire    [8:0]   id_tlb_esubcode;
     wire    [31:0]  id_wrong_addr;
     
     wire    [ 2:0]  mem_type;// 000: word, 001: halfword, 010: byte, 1xx: unsigned
@@ -91,9 +88,10 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_adef,id_tlb_ex,id_tlb_ecode,id_tlb_esubcode,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
+    assign {id_adef,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
+    wire [4:0]  inst_invtlb_op;
     wire        src1_is_pc;
     wire        src2_is_imm;
     wire        res_from_mem;
@@ -114,6 +112,7 @@ module ID (
     wire [ 4:0] op_19_15;
     wire [ 1:0] op_25_24;
     wire [ 4:0] op_9_5;//exp12
+    wire [ 1:0] op_14_13;
     wire [ 4:0] rd;
     wire [ 4:0] rj;
     wire [ 4:0] rk;
@@ -128,6 +127,7 @@ module ID (
     wire [31:0] op_19_15_d;
     wire [ 3:0] op_25_24_d;
     wire [31:0] op_9_5_d;//exp12
+    wire [ 3:0] op_14_13_d;
 
     wire        inst_add_w;
     wire        inst_sub_w;
@@ -191,6 +191,15 @@ module ID (
     wire        inst_rdcntvl;
     wire        inst_rdcntvh;
     
+    //exp18
+    wire        inst_tlbsrch;
+    wire        inst_tlbrd;
+    wire        inst_tlbwr;
+    wire        inst_tlbfill;
+    wire        inst_invtlb;
+
+    wire        is_tlb;
+    
     wire        is_b;
 
     wire        need_ui5;
@@ -238,6 +247,7 @@ module ID (
     assign op_19_15  = id_inst[19:15];
     assign op_25_24  = id_inst[25:24];
     assign op_9_5    = id_inst[9:5];
+    assign op_14_13  = id_inst[14:13];
 
     assign rd   = id_inst[ 4: 0];
     assign rj   = id_inst[ 9: 5];
@@ -254,6 +264,7 @@ module ID (
     decoder_5_32 u_dec3(.in(op_19_15 ), .out(op_19_15_d ));
     decoder_2_4  u_dec4(.in(op_25_24 ), .out(op_25_24_d ));
     decoder_5_32 u_dec5(.in(op_9_5   ), .out(op_9_5_d   ));//exp12
+    decoder_2_4  u_dec6(.in(op_14_13 ), .out(op_14_13_d ));
 
     assign inst_add_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
     assign inst_sub_w  = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
@@ -315,6 +326,16 @@ module ID (
     assign inst_rdcntvl= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h18) & (rj == 5'h00);
     assign inst_rdcntvh= op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & (rk == 5'h19) & (rj == 5'h00);
     
+    //exp18
+    assign inst_tlbsrch = op_31_26_d[6'h1] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & (rk==5'b01010);
+    assign inst_tlbrd   = op_31_26_d[6'h1] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & (rk==5'b01011);
+    assign inst_tlbwr   = op_31_26_d[6'h1] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & (rk==5'b01100);
+    assign inst_tlbfill = op_31_26_d[6'h1] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & (rk==5'b01101);
+    assign inst_invtlb  = op_31_26_d[6'h1] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h13];
+    
+    assign inst_invtlb_op = id_inst[4:0];
+
+    assign type_tlb    = inst_tlbsrch | inst_tlbrd | inst_tlbwr | inst_tlbfill | inst_invtlb;
     assign alu_op[ 0] = inst_add_w | inst_addi_w
                       | inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu  
                       | inst_st_w | inst_st_b | inst_st_h
@@ -407,7 +428,7 @@ module ID (
     assign dst_is_r1     = inst_bl;
     assign dst_is_rj     = inst_rdcntid;
     assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b &
-                       ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu;
+                       ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu & ~is_tlb;
     assign id_dest       = dst_is_r1 ? 5'd1 :
                            dst_is_rj ? rj   : rd;
 
@@ -471,7 +492,8 @@ module ID (
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
         id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
-        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode  
+        inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode,
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op
     };
 
     assign id_if_bus = {
@@ -525,13 +547,11 @@ module ID (
 
     assign id_ertn_flush = inst_ertn & id_valid;
 
-    assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef | id_tlb_ex);
+    assign id_ex = id_valid & (inst_syscall | inst_break | id_ine | id_has_int | id_adef);
     assign id_ecode = id_has_int   ? `ECODE_INT
-                    : id_tlb_ex    ? id_tlb_ecode
                     : id_adef      ? `ECODE_ADE
                     : id_ine       ? `ECODE_INE
                     : inst_break   ? `ECODE_BRK
                     : inst_syscall ? `ECODE_SYS : 6'b0;
-    assign id_esubcode = id_tlb_ex ? id_tlb_esubcode :
-                         id_adef ? `ESUBCODE_ADEF : 9'b0;
+    assign id_esubcode = id_adef ? `ESUBCODE_ADEF : 9'b0;
 endmodule

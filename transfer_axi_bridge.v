@@ -1,436 +1,377 @@
-`define ID_INST 4'b0000
-`define ID_DATA 4'b0001
-
-`define REQ_INST 2'b01
-`define REQ_DATA 2'b10
-`define REQ_NO   2'b00
-
-`define STATE_ONE 2'b01
-`define STATE_TWO 2'b10
-
 module transfer_axi_bridge(
-    input wire         clk    ,
-    input wire         resetn ,
- 
-    // ar 
-    output wire    [ 3:0] arid   ,
-    output wire    [31:0] araddr ,
-    output wire    [ 7:0] arlen  , 
-    output wire    [ 2:0] arsize , 
-    output wire    [ 1:0] arburst, 
-    output wire    [ 1:0] arlock , 
-    output wire    [ 3:0] arcache, 
-    output wire    [ 2:0] arprot ,
-    output wire           arvalid, 
-    input  wire           arready,
+    input  wire         aclk,
+    input  wire         aresetn,
 
-    // r
-    input  wire    [ 3:0] rid   , 
-    input  wire    [31:0] rdata , 
-    input  wire    [ 1:0] rresp , 
-    input  wire           rlast , 
-    input  wire           rvalid,
-    output reg            rready, 
+    // AXI AR channel
+    output reg  [3:0]   arid,
+    output reg [31:0]   araddr,
+    output reg  [7:0]   arlen,
+    output reg  [2:0]   arsize,
+    output reg  [1:0]   arburst,
+    output reg  [1:0]   arlock,
+    output reg  [3:0]   arcache,
+    output reg  [2:0]   arprot,
+    output reg          arvalid,
+    input  wire         arready,
 
-    // aw
-    output wire    [ 3:0] awid   ,
-    output wire    [31:0] awaddr , 
-    output wire    [ 7:0] awlen  ,
-    output wire    [ 2:0] awsize ,
-    output wire    [ 1:0] awburst,
-    output wire    [ 1:0] awlock , 
-    output wire    [ 3:0] awcache,
-    output wire    [ 2:0] awprot , 
-    output wire           awvalid,
-    input  wire           awready, 
+    // AXI R channel
+    input  wire  [3:0]  rid,
+    input  wire [31:0]  rdata,
+    input  wire  [1:0]  rresp,
+    input  wire         rlast,
+    input  wire         rvalid,
+    output wire         rready,
 
-    // w
-    output wire    [ 3:0] wid   , 
-    output wire    [31:0] wdata , 
-    output reg     [ 3:0] wstrb , 
-    output wire           wlast , 
-    output wire           wvalid,
-    input  wire           wready, 
- 
-    // b 
-    input  wire   [ 3:0] bid   , 
-    input  wire   [ 1:0] bresp ,  
-    input  wire          bvalid, 
-    output reg           bready, 
+    // AXI AW channel
+    output reg  [3:0]   awid,
+    output reg [31:0]   awaddr,
+    output reg  [7:0]   awlen,
+    output reg  [2:0]   awsize,
+    output reg  [1:0]   awburst,
+    output reg  [1:0]   awlock,
+    output reg  [3:0]   awcache,
+    output reg  [2:0]   awprot,
+    output reg          awvalid,
+    input  wire         awready,
 
-    // inst sram interface    
-    input  wire          inst_req   ,
-    input  wire          inst_wr     ,
-    input  wire   [ 1:0] inst_size   ,
-    input  wire   [ 3:0] inst_wstrb  ,
-    input  wire   [31:0] inst_addr   ,
-    input  wire   [31:0] inst_wdata  ,
-    output wire   [31:0] inst_rdata  ,
-    output reg           inst_addr_ok,
-    output wire          inst_data_ok,
+    // AXI W channel
+    output reg  [3:0]   wid,
+    output reg [31:0]   wdata,
+    output reg  [3:0]   wstrb,
+    output reg          wlast,
+    output reg          wvalid,
+    input  wire         wready,
+
+    // AXI B channel
+    input  wire  [3:0]  bid,
+    input  wire  [1:0]  bresp,
+    input  wire         bvalid,
+    output wire         bready,
+
+    // Instruction SRAM interface
+    input  wire         inst_sram_req,
+    input  wire         inst_sram_wr,
+    input  wire  [1:0]  inst_sram_size,
+    input  wire  [3:0]  inst_sram_wstrb,
+    input  wire [31:0]  inst_sram_addr,
+    input  wire [31:0]  inst_sram_wdata,
+    output wire [31:0]  inst_sram_rdata,
+    output reg          inst_sram_addr_ok,
+    output reg          inst_sram_data_ok,
     
-    // data sram interface
-    input  wire          data_req   ,
-    input  wire          data_wr     ,
-    input  wire   [ 3:0] data_wstrb  ,
-    input  wire   [ 1:0] data_size   , 
-    input  wire   [31:0] data_addr   ,
-    input  wire   [31:0] data_wdata  ,
-    output wire   [31:0] data_rdata  ,
-    output reg           data_addr_ok,
-    output wire          data_data_ok
+    // Data SRAM interface
+    input  wire         data_sram_req,
+    input  wire         data_sram_wr,
+    input  wire  [3:0]  data_sram_wstrb,
+    input  wire  [1:0]  data_sram_size,
+    input  wire [31:0]  data_sram_addr,
+    input  wire [31:0]  data_sram_wdata,
+    output reg          data_sram_addr_ok,
+    output reg          data_sram_data_ok,
+    output wire [31:0]  data_sram_rdata
 );
-reg [31:0] read_addr_inst;
-reg [2:0] read_size_inst;
-reg [31:0] read_addr_data;
-reg [2:0] read_size_data;
-reg [1:0] cstate_ar_inst;
-reg [1:0] cstate_ar_data;
-reg arvalid_inst;
-reg arvalid_data;
-reg data_addr_r_f;
-reg inst_addr_r_f;
-reg [1:0]has_data_read;
-reg [1:0]has_data_write;
-reg [1:0] cstate_r;
-reg [31:0] rdata_r;
-reg [3:0] rid_r;
-reg inst_data_ok_r;
-reg data_data_ok_r;
 
-reg data_data_ok_w;
-reg [1:0]cstate_aw;
-reg [31:0] write_addr;
-reg [2:0] write_size;
-reg awvalid_r;
+    // State Definitions
+    localparam RREQ_IDLE = 3'd0;
+    localparam RREQ_INST = 3'd1;
+    localparam RREQ_DATA = 3'd2;
+    localparam RREQ_WAIT_RAW = 3'd3;
+    
+    localparam WREQ_IDLE = 2'd0;
+    localparam WREQ_SEND = 2'd1;
+    localparam WREQ_WAIT_RAW = 2'd2;
 
-//w
-reg [31:0] write_data;
-reg wvalid_r;
-reg [1:0]success_w;	
-reg [1:0] cstate_b;
-reg [3:0]bid_r;
-//read inst request
-reg mark_for_datareq;
-always @(posedge clk) begin
-	if(~resetn) begin 
-		cstate_ar_inst = `STATE_ONE;
-		read_addr_inst <= 32'b0;
-		read_size_inst <= 3'b0;
-		arvalid_inst <= 1'b0;
-		inst_addr_r_f <= 1'b0;
-		mark_for_datareq <= 1'b0;
-	end
-	else if(cstate_ar_inst == `STATE_ONE) begin
-		if(inst_req && ~inst_wr && inst_addr_ok && ~arvalid_inst && data_addr_r_f) begin
-			read_addr_inst <= inst_addr;
-			read_size_inst <= {1'b0,inst_size};
-			mark_for_datareq <= 1'b1;
-		end
-		else if(inst_req && ~inst_wr && inst_addr_ok && ~arvalid_inst ) begin
-			cstate_ar_inst <= `STATE_TWO;
-			arvalid_inst <= 1'b1;
-			inst_addr_r_f <= 1'b1;
-			read_addr_inst <= inst_addr;
-			read_size_inst <= {1'b0,inst_size};
-		end
-		if(mark_for_datareq && rready && rvalid) begin
-			cstate_ar_inst <= `STATE_TWO;
-			arvalid_inst <= 1'b1;
-			inst_addr_r_f <= 1'b1;
-			mark_for_datareq <= 1'b0;
-		end
-	end
-	else if(cstate_ar_inst == `STATE_TWO) begin
-		//握手成功
-		if(arready && arvalid && (~arvalid_data)) begin
-			//cstate_ar_inst <= `STATE_ONE;
-			arvalid_inst <= 1'b0;
-			//inst_addr_r_f <= 1'b0;
-		end
-		if(~arvalid_inst && rready && rvalid) begin
-			cstate_ar_inst <= `STATE_ONE;
-			inst_addr_r_f <= 1'b0;
-		end
-	end
-end
-//read data
-reg mark_for_instreq;
-always @(posedge clk) begin
-	if(~resetn) begin 
-		cstate_ar_data = `STATE_ONE;
-		read_addr_data <= 32'b0;
-		read_size_data <= 3'b0;
-		arvalid_data <= 1'b0;
-		data_addr_r_f <= 1'b0;
-		mark_for_instreq <= 1'b0;
-	end
-	else if(cstate_ar_data == `STATE_ONE) begin
-		if(data_req && ~data_wr && data_addr_ok && ~arvalid_data && inst_addr_r_f)begin
-			mark_for_instreq <= 1'b1;
-			read_addr_data <= data_addr;
-			read_size_data <= {1'b0,data_size};
-		end
-		else if(data_req && ~data_wr && data_addr_ok && ~arvalid_data ) begin
-			cstate_ar_data <= `STATE_TWO;
-			arvalid_data <= 1'b1;
-			data_addr_r_f <= 1'b1;
-			read_addr_data <= data_addr;
-			read_size_data <= {1'b0,data_size};
-			has_data_read <= 1'b00;
-		end
-		if(rready && rvalid && mark_for_instreq) begin
-			cstate_ar_data <= `STATE_TWO;
-			arvalid_data <= 1'b1;
-			data_addr_r_f <= 1'b1;
-			has_data_read <= 1'b00;
-			mark_for_instreq <= 1'b0;
-		end
-	end
-	else if(cstate_ar_data == `STATE_TWO) begin
-		//握手成功
-		if(arready && arvalid) begin
-			//是不是应该放在下面，以便阻塞inst的读。
-			arvalid_data <= 1'b0;
-			has_data_read <= 2'b01;
-		end
-		//读反馈
-		else if(has_data_read == 2'b01 && rready && rvalid) begin
-			data_addr_r_f <= 1'b0;
-			has_data_read <= 2'b10;
-			cstate_ar_data <= `STATE_ONE;
-		end
-	end
-end
+    // Internal Registers
+    reg [2:0] rreq_state;
+    reg [1:0] wreq_state;
+    
+    reg [31:0] inst_rdata_buf;
+    reg [31:0] data_rdata_buf;
+    
+    reg [1:0] inst_read_cnt;
+    reg [1:0] data_read_cnt;
+    reg [1:0] write_cnt;
+    
+    // 跟踪 AW 和 W 是否已经握手
+    reg aw_sent;
+    reg w_sent;
 
-always @(posedge clk) begin
-	if(!resetn)
-		inst_addr_ok <= 1'b0;
-	else if(inst_addr_ok)
-		inst_addr_ok <= 1'b0;
-	else if(inst_req && cstate_ar_inst == `STATE_ONE && ~data_addr_r_f)
-		inst_addr_ok <= 1'b1;
-end
+    // Request Detection
+    wire inst_read_req = inst_sram_req && !inst_sram_wr;
+    wire data_read_req = data_sram_req && !data_sram_wr;
+    wire data_write_req = data_sram_req && data_sram_wr;
+    
+    // RAW hazard
+    wire raw_hazard = arvalid && awvalid && (araddr == awaddr);
 
-always @(posedge clk) begin
-	if(!resetn)
-		data_addr_ok <= 1'b0;
-	else if(data_addr_ok)
-		data_addr_ok <= 1'b0;
-	else if(data_req && (cstate_ar_data == `STATE_ONE && ~inst_addr_r_f) && cstate_aw == `STATE_ONE )
-		data_addr_ok <= 1'b1;
-end
+    // Read Request State Machine
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            rreq_state <= RREQ_IDLE;
+        end else begin
+            case (rreq_state)
+                RREQ_IDLE: begin
+                    if (data_read_req)
+                        rreq_state <= raw_hazard ? RREQ_WAIT_RAW : RREQ_DATA;
+                    else if (inst_read_req)
+                        rreq_state <= RREQ_INST;
+                end
+                RREQ_INST: begin
+                    if (arvalid && arready)
+                        rreq_state <= RREQ_IDLE;
+                end
+                RREQ_DATA: begin
+                    if (arvalid && arready)
+                        rreq_state <= RREQ_IDLE;
+                end
+                RREQ_WAIT_RAW: begin
+                    if (!raw_hazard)
+                        rreq_state <= RREQ_DATA;
+                end
+                default: rreq_state <= RREQ_IDLE;
+            endcase
+        end
+    end
 
-assign arlen = 8'b0;
-assign arburst = 2'b01;
-assign arlock = 2'b00;
-assign arcache =4'b0;
-assign arprot = 3'b0;
+    // Write Request State Machine
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            wreq_state <= WREQ_IDLE;
+            aw_sent <= 1'b0;
+            w_sent <= 1'b0;
+        end else begin
+            case (wreq_state)
+                WREQ_IDLE: begin
+                    if (data_write_req) begin
+                        wreq_state <= raw_hazard ? WREQ_WAIT_RAW : WREQ_SEND;
+                        aw_sent <= 1'b0;
+                        w_sent <= 1'b0;
+                    end
+                end
+                WREQ_WAIT_RAW: begin
+                    if (!raw_hazard)
+                        wreq_state <= WREQ_SEND;
+				end
+                WREQ_SEND: begin
+                    if (awvalid && awready)
+                        aw_sent <= 1'b1;
+                    if (wvalid && wready)
+                        w_sent <= 1'b1; 
+                    if ((aw_sent || (awvalid && awready)) && 
+                        (w_sent || (wvalid && wready))) begin
+                        wreq_state <= WREQ_IDLE;
+                        aw_sent <= 1'b0;
+                        w_sent <= 1'b0;
+                    end
+                end   
+                default: wreq_state <= WREQ_IDLE;
+            endcase
+        end
+    end
 
-/*assign arid = (data_addr_r_f & ~WAR_block_data) ? ({4{arready & arvalid}} & `ID_DATA) : //data 读有效且无冲突 
-			  ((inst_addr_r_f & ~WAR_block_inst) ? ({4{arready & arvalid}} & `ID_INST) : 1'b0);
-
-assign araddr = (data_addr_r_f & ~WAR_block_data) ? ({32{arready & arvalid}} & read_addr_data) : //data 读有效且无冲突 
-				((inst_addr_r_f & ~WAR_block_inst) ? ({32{arready & arvalid}} & read_addr_inst) : 32'b0);
-assign arsize = (data_addr_r_f & ~WAR_block_data) ? ({3{arready & arvalid}} & read_size_data) : //data 读有效且无冲突 
-				((inst_addr_r_f & ~WAR_block_inst) ? ({3{arready & arvalid}} & read_size_inst) : 3'b0);
-				
-assign arvalid = (data_addr_r_f & ~WAR_block_data) ? arvalid_data : //data 读有效且无冲突 
-				((inst_addr_r_f & ~WAR_block_inst) ? arvalid_inst : 1'b0);
-*/
-assign arid = (data_addr_r_f ) ? (`ID_DATA) : //data 读有效且无冲突 
-			  ((inst_addr_r_f) ? (`ID_INST) : 1'b0);
-
-assign araddr = (data_addr_r_f) ? (read_addr_data) : //data 读有效且无冲突 
-				((inst_addr_r_f) ? (read_addr_inst) : 32'b0);
-assign arsize = (data_addr_r_f) ? (read_size_data) : //data 读有效且无冲突 
-				((inst_addr_r_f) ? (read_size_inst) : 3'b0);
-				
-assign arvalid = (data_addr_r_f) ? arvalid_data : //data 读有效且无冲突 
-				((inst_addr_r_f) ? arvalid_inst : 1'b0);
-//read response
-always @(posedge clk) begin
-	if(~resetn) begin 
-		cstate_r <= `STATE_ONE;
-		rid_r <= 4'b0;
-		rdata_r <= 32'b0;
-	end
-	else if(cstate_r == `STATE_ONE) begin
-		if(rvalid & rready) begin
-			rdata_r <= rdata;
-			rid_r <= rid;
-			cstate_r <= `STATE_TWO;
-		end
-	end
-	else if(cstate_r == `STATE_TWO) begin
-		rid_r <= 4'b1111;
-		if(arready && arvalid) begin
-			cstate_r <= `STATE_ONE;
-		end
-	end
-end
-
-// read ok
-
-always@(posedge clk)
-begin
-    if(!resetn)
-		rready <= 1'd0;
-    if(arready & arvalid)
-        rready <= 1'd1;
-    else if(rready & rvalid)
-        rready <= 1'd0; 
-end
-always @(posedge clk) begin
-	if(!resetn)
-		inst_data_ok_r <= 1'b0;
-	else if(inst_data_ok_r)
-		inst_data_ok_r <= 1'b0;
-	else if((rid_r == `ID_INST) & (cstate_r == `STATE_TWO))
-		inst_data_ok_r <= 1'b1;
-end
-always @(posedge clk) begin
-	if(!resetn)
-		data_data_ok_r <= 1'b0;
-	else if(data_data_ok_r)
-		data_data_ok_r <= 1'b0;
-	else if((rid_r == `ID_DATA) & (cstate_r == `STATE_TWO))
-		data_data_ok_r <= 1'b1;
-end
-
-assign inst_rdata = {32{inst_data_ok_r}} & rdata_r; 		
-assign data_rdata = {32{data_data_ok_r}} & rdata_r;
+    // Transaction Counters
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            inst_read_cnt <= 2'd0;
+        end else begin
+            case ({arvalid && arready && arid == 4'd0, rvalid && rready && rid == 4'd0})
+                2'b10: inst_read_cnt <= inst_read_cnt + 1'd1;
+                2'b01: inst_read_cnt <= inst_read_cnt - 1'd1;
+                default: inst_read_cnt <= inst_read_cnt;
+            endcase
+        end
+    end
+    
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            data_read_cnt <= 2'd0;
+        end else begin
+            case ({arvalid && arready && arid == 4'd1, rvalid && rready && rid == 4'd1})
+                2'b10: data_read_cnt <= data_read_cnt + 1'd1;
+                2'b01: data_read_cnt <= data_read_cnt - 1'd1;
+                default: data_read_cnt <= data_read_cnt;
+            endcase
+        end
+    end
+    
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            write_cnt <= 2'd0;
+        end else begin
+            case ({wvalid && wready, bvalid && bready})
+                2'b10: write_cnt <= write_cnt + 1'd1;
+                2'b01: write_cnt <= write_cnt - 1'd1;
+                default: write_cnt <= write_cnt;
+            endcase
+        end
+    end
 
 
-//write ok	 
-always @(posedge clk) begin
-	if(~resetn) begin 
-		cstate_aw = `STATE_ONE;
-		write_addr <= 32'b0;
-		write_size <= 3'b0;
-		awvalid_r <= 1'b0;
-		write_data <= 32'b0;
-		wvalid_r <= 1'b0;
-		success_w <= 2'b0;
-	end
-	else if(cstate_aw == `STATE_ONE) begin
-		if(data_req && data_wr && data_addr_ok && ~awvalid_r && ~wvalid_r) begin
-			cstate_aw <= `STATE_TWO;
-			awvalid_r <= 1'b1;
-			wvalid_r <= 1'b1;
-			write_size <= {1'b0, data_size};
-			write_data <= data_wdata;
-			write_addr <= data_addr;
-			success_w <= 2'b0;
-			has_data_write <= 2'b00;
-		end
-	end
-	else if(cstate_aw == `STATE_TWO) begin
-		if((awvalid && awready && wvalid && wready) || (awvalid && awready && success_w == 2'b10) || (wvalid && wready && success_w == 2'b01)) begin
-			success_w <= 2'b0;
-			awvalid_r <= 1'b0;
-			wvalid_r <= 1'b0;
-			write_size <= 3'b0;
-			has_data_write <= 2'b01;
-		end
-		else if(awvalid && awready) begin
-			success_w <= 2'b01;
-			awvalid_r <= 1'b0;
-		end
-		else if(wvalid && wready) begin
-			success_w <= 2'b10;
-			wvalid_r <= 1'b0;
-		end
-		else if(bready && bvalid && has_data_write == 2'b01) begin
-			has_data_write <= 2'b10;
-			write_addr <= 32'b0;
-			write_data <= 32'b0;
-			cstate_aw <= `STATE_ONE;
-		end
-	end
-end
-assign awvalid = awvalid_r;
-assign awid = `ID_DATA;
-assign awlen = 1'b0;
-assign awburst = 2'b01;
-assign awlock = 2'b0;
-assign awcache = 4'b0;
-assign awprot = 3'b0; 
-/*assign awaddr =  {32{awready && awvalid}} & write_addr;
-assign awsize = {3{awready && awvalid}} & write_size;*/
-assign awaddr =   write_addr;
-assign awsize =  write_size;
-//w
-assign wid = `ID_DATA;
-assign wlast = 1'b1;
-//assign wdata = {32{wready && wvalid}} & write_data;
-assign wdata = write_data;
-assign wvalid = wvalid_r;
+    // AXI AR Channel
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            arvalid <= 1'b0;
+            arid <= 4'd0;
+            araddr <= 32'd0;
+            arsize <= 3'd0;
+            arlen <= 8'd0;
+            arburst <= 2'b01;
+            arlock <= 2'd0;
+            arcache <= 4'd0;
+            arprot <= 3'd0;
+        end else begin
+            if (rreq_state == RREQ_DATA && !arvalid) begin
+                arvalid <= 1'b1;
+                arid <= 4'd1;
+                araddr <= data_sram_addr;
+                arsize <= {1'b0, data_sram_size};
+                arlen <= 8'd0;
+                arburst <= 2'b01;
+                arlock <= 2'd0;
+                arcache <= 4'd0;
+                arprot <= 3'd0;
+            end else if (rreq_state == RREQ_INST && !arvalid) begin
+                arvalid <= 1'b1;
+                arid <= 4'd0;
+                araddr <= inst_sram_addr;
+                arsize <= {1'b0, inst_sram_size};
+                arlen <= 8'd0;
+                arburst <= 2'b01;
+                arlock <= 2'd0;
+                arcache <= 4'd0;
+                arprot <= 3'd0;
+            end else if (arready) begin
+                arvalid <= 1'b0;
+            end
+        end
+    end
 
-//b write response
-
-always @(posedge clk) begin
-	if(~resetn) begin
-		cstate_b <= `STATE_ONE;
-		bid_r <= 4'b0;
-	end
-	else if(cstate_b == `STATE_ONE) begin
-		if(bvalid && bready) begin			
-			cstate_b <= `STATE_TWO;
-			bid_r <= bid;
-		end
-	end
-	else if(cstate_b == `STATE_TWO) begin
-			bid_r <= 4'b1111;
-		if((awvalid && awready && wvalid && wready) || (awvalid && awready && success_w == 2'b10) || (wvalid && wready && success_w == 2'b01)) begin
-			cstate_b <= `STATE_ONE;
-		end
-	end
-end
-
-always @(posedge clk)
-begin
-	if(!resetn)
-		bready <= 1'b0;
-	else if((awvalid && awready && wvalid && wready) || (awvalid && awready && success_w == 2'b10) || (wvalid && wready && success_w == 2'b01))
-		bready <= 1'b1;
-	else if(bvalid & bready)
-		bready <= 1'b0;
-end
-
-always @(posedge clk) begin
-	if(!resetn)
-		data_data_ok_w <= 1'b0;
-	else if(data_data_ok_w)
-		data_data_ok_w <= 1'b0;
-	else if(cstate_b == `STATE_TWO && bid_r == `ID_DATA)
-		data_data_ok_w <= 1'b1;
-end
+    // AXI R Channel
+    assign rready = (inst_read_cnt != 2'd0) || (data_read_cnt != 2'd0) || 
+                    (arvalid && arready);
+    
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            inst_rdata_buf <= 32'd0;
+            data_rdata_buf <= 32'd0;
+        end else if (rvalid && rready) begin
+            if (rid == 4'd0)
+                inst_rdata_buf <= rdata;
+            else if (rid == 4'd1)
+                data_rdata_buf <= rdata;
+        end
+    end
 
 
-always @(*) begin
-	case({write_size, write_addr[1:0]})
-	5'b000_00: wstrb = 4'b0001; // SB
-    5'b000_01: wstrb = 4'b0010; // SB
-    5'b000_10: wstrb = 4'b0100; // SB
-    5'b000_11: wstrb = 4'b1000; // SB
-    5'b001_00: wstrb = 4'b0011; // SH
-    5'b001_10: wstrb = 4'b1100; // SH
-    5'b010_00: wstrb = 4'b1111; // SW
-    5'b000_00: wstrb = 4'b0001; // SWL
-    5'b001_01: wstrb = 4'b0011; // SWL
-    5'b010_10: wstrb = 4'b0111; // SWL
-    5'b010_11: wstrb = 4'b1111; // SWL
-    5'b010_00: wstrb = 4'b1111; // SWR
-    5'b010_01: wstrb = 4'b1110; // SWR
-    5'b001_10: wstrb = 4'b1100; // SWR
-    5'b000_11: wstrb = 4'b1000; // SWR
-	default: wstrb = 4'b0;
-	endcase
-end
+    // AXI AW Channel
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            awvalid <= 1'b0;
+            awid <= 4'd1;
+            awaddr <= 32'd0;
+            awsize <= 3'd0;
+            awlen <= 8'd0;
+            awburst <= 2'b01;
+            awlock <= 2'd0;
+            awcache <= 4'd0;
+            awprot <= 3'd0;
+        end else begin
+            if (wreq_state == WREQ_SEND && !awvalid && !aw_sent) begin
+                awvalid <= 1'b1;
+                awid <= 4'd1;
+                awaddr <= data_sram_addr;
+                awsize <= {1'b0, data_sram_size};
+                awlen <= 8'd0;
+                awburst <= 2'b01;
+                awlock <= 2'd0;
+                awcache <= 4'd0;
+                awprot <= 3'd0;
+            end else if (awready) begin
+                awvalid <= 1'b0;
+            end
+        end
+    end
 
-assign inst_data_ok = inst_data_ok_r;
-assign data_data_ok = data_data_ok_r || data_data_ok_w;
 
+    // AXI W Channel
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            wvalid <= 1'b0;
+            wid <= 4'd1;
+            wdata <= 32'd0;
+            wstrb <= 4'd0;
+            wlast <= 1'b1;
+        end else begin
+            if (wreq_state == WREQ_SEND && !wvalid && !w_sent) begin
+                wvalid <= 1'b1;
+                wid <= 4'd1;
+                wdata <= data_sram_wdata;
+                wstrb <= data_sram_wstrb;
+                wlast <= 1'b1;
+            end else if (wready) begin
+                wvalid <= 1'b0;
+            end
+        end
+    end
+
+
+    // AXI B Channel
+    assign bready = (write_cnt != 2'd0) || (wvalid && wready);
+
+
+    // SRAM addr_ok
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            inst_sram_addr_ok <= 1'b0;
+        end else begin
+            if (rreq_state == RREQ_IDLE && inst_read_req && !data_read_req) begin
+                inst_sram_addr_ok <= 1'b1;
+            end else begin
+                inst_sram_addr_ok <= 1'b0;
+            end
+        end
+    end
+    
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            data_sram_addr_ok <= 1'b0;
+        end else begin
+            // 读请求
+            if ((rreq_state == RREQ_IDLE || rreq_state == RREQ_WAIT_RAW) && 
+                data_read_req) begin
+                data_sram_addr_ok <= 1'b1;
+            end 
+            // 写请求
+            else if ((wreq_state == WREQ_IDLE || wreq_state == WREQ_WAIT_RAW) && 
+                     data_write_req) begin
+                data_sram_addr_ok <= 1'b1;
+            end else begin
+                data_sram_addr_ok <= 1'b0;
+            end
+        end
+    end
+
+   
+    // SRAM data_ok
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            inst_sram_data_ok <= 1'b0;
+        end else begin
+            inst_sram_data_ok <= rvalid && rready && (rid == 4'd0);
+        end
+    end
+    
+    always @(posedge aclk) begin
+        if (!aresetn) begin
+            data_sram_data_ok <= 1'b0;
+        end else begin
+            data_sram_data_ok <= (rvalid && rready && (rid == 4'd1)) ||
+                                 (bvalid && bready);
+        end
+    end
+
+    // Output Assignments
+    assign inst_sram_rdata = inst_rdata_buf;
+    assign data_sram_rdata = data_rdata_buf;
 
 endmodule

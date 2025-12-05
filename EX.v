@@ -5,12 +5,12 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [332:0] id_ex_bus,
+    input   [374:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
     input           wb_ex,
-    output  [239:0] ex_mem_bus,
+    output  [249:0] ex_mem_bus,
 
     output          data_sram_req,
     output          data_sram_wr,
@@ -26,35 +26,53 @@ module EX (
     input           mem_ertn,
     input           ertn_flush,
     output          reg_ex,
-
-    // tlb/data address translation interface
+    
+        //port with tlb.v
     output  [18:0]  s1_vppn,
     output          s1_va_bit12,
-    input           tlb_enable,
+    output  [ 9:0]  s1_asid,
+
     input           s1_found,
-    input   [19:0]  s1_ppn,
-    input   [5:0]   s1_ps,
-    input   [1:0]   s1_plv,
-    input   [1:0]   s1_mat,
-    input           s1_d,
-    input           s1_v,
-    input   [1:0]   csr_plv
+    input   [ 3:0]  s1_index,
+
+    //tlb add
+    input   [18:0]  tlbehi_vppn,
+    input   [ 9:0]  tlbasid_asid,
+
+    //tlb crush
+    input        if_ms_crush_with_tlbsrch,
+    input        if_ws_crush_with_tlbsrch,
+    input        tlb_reflush,
+
+    //for translate
+    input crmd_da,
+    input crmd_pg,
+
+    input [1:0] plv,
+    input [1:0] datm,
+
+    input DMW0_PLV0,
+    input DMW0_PLV3,
+    input [1:0] DMW0_MAT,
+    input [2:0] DMW0_PSEG,
+    input [2:0] DMW0_VSEG,
+
+    input DMW1_PLV0,        
+    input DMW1_PLV3,       
+    input [1:0] DMW1_MAT,  
+    input [2:0] DMW1_PSEG,  
+    input [2:0] DMW1_VSEG,
+
+    //input s1_found,
+    input [19:0] s1_ppn,
+    input [1:0] s1_plv,
+    input s1_d,
+    input s1_v,
+
+    output invtlb_valid,
+    output [4:0] invtlb_op
 
 );
-    function [31:0] tlb_offset_mask;
-        input [5:0] ps;
-        integer     i;
-        reg [5:0]   eff_ps;
-        begin
-            eff_ps = (ps < 6'd12) ? 6'd12 : ps;
-            tlb_offset_mask = 32'b0;
-            for (i = 0; i < 32; i = i + 1) begin
-                if (i < eff_ps)
-                    tlb_offset_mask[i] = 1'b1;
-            end
-        end
-    endfunction
-
     //exp13
     reg [63:0] cnt_value;
     
@@ -69,7 +87,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [332:0] id_ex_bus_vld;
+    reg     [374:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
@@ -119,6 +137,7 @@ module EX (
     wire    [31:0]  alu_src2;
     wire    [ 4:0]  ex_dest;
     wire    [31:0]  rkd_value;
+    wire    [31:0]  rj_value;
     wire    [31:0]  st_data;
     //csr exp12
     wire            ex_csr_we;
@@ -140,14 +159,22 @@ module EX (
     wire            ex_ex;            // 异常信号
     wire    [ 8:0]  ex_esubcode;      // 异常子码
     wire    [ 5:0]  ex_ecode;         // 异常编码
-    wire    [5:0]   final_ecode;
+    wire    [ 5:0]  final_ecode;
     wire            final_ex;
     
+    wire            inst_tlbsrch;
+    wire            inst_tlbrd;
+    wire            inst_tlbwr;
+    wire            inst_tlbfill;
+    wire            inst_invtlb;
+    wire    [ 4:0]  inst_invtlb_op;
+
     assign {
         ex_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
-        ex_dest, rkd_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
-        ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode 
+        ex_dest, rkd_value, rj_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
+        ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode,
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op
     } = id_ex_bus_vld;
 
     alu my_alu (    
@@ -161,12 +188,6 @@ module EX (
     wire [31:0] div_result;
     wire        div_busy;
     wire        div_done;
-
-    wire        ex_tlb_use;
-    wire        ex_tlb_hit;
-    wire [5:0]  ex_ps_eff;
-    wire [31:0] ex_offset_mask;
-    wire [31:0] ex_pa;
 
     div my_div (
         .clk         (clk),
@@ -224,6 +245,14 @@ module EX (
         end 
     end
     
+    assign s1_vppn = (inst_tlbsrch) ? tlbehi_vppn:
+                      (inst_invtlb) ? rkd_value[31:13] : alu_result[31:13];        
+    assign s1_va_bit12 = alu_result[12];
+    assign s1_asid = (inst_tlbsrch) ? tlbasid_asid : 
+                      (inst_invtlb) ? rj_value[9:0] : tlbasid_asid;
+    assign invtlb_valid = inst_invtlb;
+    assign invtlb_op    = inst_invtlb_op;
+    
     assign data_sram_req = ((|ex_load_op) | (|ex_store_op)) & ex_valid & mem_allowin &
                     ~wb_ex & ~ertn_flush & ~reg_ex & ~addr_ok_reg;
     assign data_sram_wr = (|data_sram_wstrb) & ex_valid & ~wb_ex & ~mem_ex & ~final_ex;
@@ -238,13 +267,16 @@ module EX (
                                                  4'b1100
                     ) : inst_st_w ? 4'b1111 : 4'b0000
                 ) : 4'b0000;  // ERTN flush 时禁止写
-    assign  data_sram_size = inst_st_h ? 2'h1 : inst_st_w ? 2'h2 : 2'h0;
-    assign  data_sram_addr = ex_tlb_use ? ex_pa : alu_result[31:0];
+    assign  data_sram_size = (mem_type[1:0] == 2'b01) ? 2'h1 : 
+                             (mem_type[1:0] == 2'b11) ? 2'h2 : 
+                              2'h0;
+    assign  data_sram_addr = alu_result[31:0];
     assign  data_sram_wdata = st_data;
     assign  ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
         ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
-        ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode
+        ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode,
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index
     };
 
     // 添加异常优先级处理逻辑
@@ -257,12 +289,4 @@ module EX (
     assign ex_ld = ex_valid & res_from_mem;
     assign ex_div_busy = ex_valid & div_busy;
     assign ex_id_bus = {ex_bypass , ex_ld , ex_dest , ex_final_result , ex_div_busy , ex_gr_we ,ex_csr_re & ex_valid, ex_csr_num};
-
-    assign s1_vppn = alu_result[31:13];
-    assign s1_va_bit12 = alu_result[12];
-    assign ex_tlb_use = tlb_enable & (|ex_load_op | |ex_store_op);
-    assign ex_ps_eff = (s1_ps < 6'd12) ? 6'd12 : s1_ps;
-    assign ex_offset_mask = tlb_offset_mask(ex_ps_eff);
-    assign ex_pa = ({s1_ppn, 12'b0}) | (alu_result & ex_offset_mask);
-    assign ex_tlb_hit = s1_found & s1_v;
 endmodule
