@@ -30,9 +30,6 @@ module IF (
     //for translate
     input crmd_da,
     input crmd_pg,
-    input [1:0] crmd_datf,
-    input [1:0] crmd_datm,
-
     input [1:0] plv,
     input [1:0] datf,
 
@@ -124,7 +121,7 @@ module IF (
                          wb_ex           ? ex_entry      :
                          ertn_flush_reg  ? ertn_entry_reg: 
                          ertn_flush      ? ertn_entry    :
-                         //tlb_reflush     ? tlb_reflush_pc:
+                         tlb_reflush     ? tlb_reflush_pc:
                          br_taken_reg    ? br_target_reg : 
                          if_br_taken     ? br_target     : seq_pc;
     

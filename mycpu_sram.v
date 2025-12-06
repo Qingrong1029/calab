@@ -248,8 +248,6 @@ module mycpu_sram(
         .tlb_reflush_pc     (tlb_reflush_pc),
         .crmd_da            (crmd_da),
         .crmd_pg            (crmd_pg),
-        .crmd_datf          (crmd_datf),
-        .crmd_datm          (crmd_datm),
         
         .plv                (crmd_plv),
         .datf               (crmd_datf),
@@ -545,6 +543,23 @@ module mycpu_sram(
         
         //ASID
         .tlbasid_asid       (tlbasid_asid),
+
+        .DMW0_PLV0          (tlbdmw0_plv0),
+        .DMW0_PLV3          (tlbdmw0_plv3),
+        .DMW0_MAT           (tlbdmw0_mat),
+        .DMW0_PSEG          (tlbdmw0_pseg),
+        .DMW0_VSEG          (tlbdmw0_vseg),
+
+        .DMW1_PLV0          (tlbdmw1_plv0),
+        .DMW1_PLV3          (tlbdmw1_plv3),
+        .DMW1_MAT           (tlbdmw1_mat),
+        .DMW1_PSEG          (tlbdmw1_pseg),
+        .DMW1_VSEG          (tlbdmw1_vseg),
+
+        .plv                (crmd_plv),
+        .crmd_da            (crmd_da),
+        .crmd_pg            (crmd_pg),
+        .datf               (crmd_datf),
 
         .tlb_reflush        (tlb_reflush),
         .tlb_reflush_pc     (tlb_reflush_pc),

@@ -115,3 +115,10 @@
 `define CSR_ASID_ASID       9:0
 // TLBRENTRY
 `define CSR_TLBRENTRY_PA    31:6
+
+//  DMW0 DMW1
+`define CSR_DMW_PLV0        0
+`define CSR_DMW_PLV3        3
+`define CSR_DMW_MAT         5:4
+`define CSR_DMW_PSEG        27:25
+`define CSR_DMW_VSEG        31:29
