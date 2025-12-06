@@ -293,7 +293,6 @@ module mycpu_sram(
         .ertn_flush         (ertn_flush),
         .id_has_int         (has_int),
         .wb_ex              (wb_ex | ertn_flush),
-        .tlb_zombie         (tlb_zombie),
         .tlb_reflush        (tlb_reflush)
     );
     EX  my_EX (
