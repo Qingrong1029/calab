@@ -240,7 +240,6 @@ module mycpu_sram(
         .inst_sram_rdata    (inst_sram_rdata),
         .ertn_flush         (ertn_flush),
         .ertn_entry         (ertn_entry),
-        .ex_tlbentry        (ex_tlbentry),
         .wb_ex              (wb_ex),
         .ex_entry           (ex_entry),
         
@@ -502,10 +501,14 @@ module mycpu_sram(
         .tlb_reflush        (tlb_reflush),
         .tlb_reflush_pc     (tlb_reflush_pc),
         
-        .ex_tlb_refill      (ex_tlb_refill),
+        .out_ex_tlb_refill  (ex_tlb_refill),
         .stat_ecode         (stat_ecode),
         
-        .if_wb_crush_tlbsrch (if_ws_crush_with_tlbsrch)
+        .if_wb_crush_tlbsrch (if_ws_crush_with_tlbsrch),
+        
+        .s1_found           (s1_found),
+        .s1_index           (s1_index),
+        .s1_asid            (s1_asid)
     );
     csr_reg csr(
         .clk                (clk),
@@ -585,25 +588,17 @@ module mycpu_sram(
         .tlbrd_tlbidx_ps    (tlbrd_tlbidx_ps),
         .tlbrd_asid_asid    (tlbrd_asid_asid),
         
-        .ex_tlb_refill      (ex_tlb_refill),
-        .crmd_plv           (crmd_plv),
-        .crmd_da            (crmd_da),
-        .crmd_pg            (crmd_pg),
-        .crmd_datf          (crmd_datf),
-        .crmd_datm          (crmd_datm),
+        .tlb_reflush        (tlb_reflush),
+        .tlb_reflush_pc     (tlb_reflush_pc),
         
-        .tlbdmw0_plv0       (tlbdmw0_plv0),
-        .tlbdmw0_plv3       (tlbdmw0_plv3),
-        .tlbdmw0_mat        (tlbdmw0_mat),
-        .tlbdmw0_pseg       (tlbdmw0_pseg),
-        .tlbdmw0_vseg       (tlbdmw0_vseg),
+        .out_ex_tlb_refill  (ex_tlb_refill),
+        .stat_ecode         (stat_ecode),
         
-        .tlbdmw1_plv0       (tlbdmw1_plv0),
-        .tlbdmw1_plv3       (tlbdmw1_plv3),
-        .tlbdmw1_mat        (tlbdmw1_mat),
-        .tlbdmw1_pseg       (tlbdmw1_pseg),
-        .tlbdmw1_vseg       (tlbdmw1_vseg),
-        .stat_ecode         (stat_ecode)    
+        .if_wb_crush_tlbsrch (if_ws_crush_with_tlbsrch),
+        
+        .s1_found           (s1_found),
+        .s1_index           (s1_index),
+        .s1_asid            (s1_asid)
     );
 
     tlb my_tlb (

@@ -46,6 +46,8 @@
 `define CSR_STLBIDX    14'h001e
 `define CSR_RVACFG     14'h001f
 `define CSR_TLBRENTRY  14'h0024
+`define CSR_DMW0       14'h0180
+`define CSR_DMW1       14'h0181
 
 // ========== 常用宏 ==========
 `define CSR_MASK       14'h3fff   // CSR 地址掩码

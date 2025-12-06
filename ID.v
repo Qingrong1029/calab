@@ -31,7 +31,6 @@ module ID (
     wire            br_stall;
     wire    [31:0]  br_target;
     reg     [96:0]  if_id_bus_vld;
-    wire            wb_ex;
     wire            id_adef;
     wire    [31:0]  id_wrong_addr;
     
@@ -570,8 +569,8 @@ module ID (
     assign tlb_inst_zombie = inst_tlbwr | inst_tlbfill | inst_invtlb | inst_tlbrd;
     
     wire csr_inst_zombie;
-    assign csr_inst_zombie = (inst_csrwr | inst_csrxchg) && (ds_csr_num == `CSR_CRMD || 
-                        csr_num == `CSR_DMW0 || csr_num == `CSR_DMW1 || csr_num == `CSR_ASID);
+    assign csr_inst_zombie = (inst_csrwr | inst_csrxchg) && (id_csr_num == `CSR_CRMD || 
+                        id_csr_num == `CSR_DMW0 || id_csr_num == `CSR_DMW1 || id_csr_num == `CSR_ASID);
 
 assign tlb_zombie = 0;
 endmodule

@@ -65,7 +65,84 @@ module csr_reg (
     output wire [ 1:0] w_tlb_plv1,
     output wire [ 1:0] w_tlb_mat1,
     output wire        w_tlb_d1,
-    output wire        w_tlb_v1
+    output wire        w_tlb_v1,
+
+    // ========== mycpu_sram expected ports ==========
+    // IF stage exception signals
+    input  wire        if_fetch_plv_ex,
+    input  wire        if_fetch_tlb_refill,
+    
+    // TLBIDX outputs
+    output wire [ 3:0] tlbidx_index,
+    output wire [ 5:0] tlbidx_ps,
+    output wire        tlbidx_ne,
+    
+    // TLBEHI output
+    output wire [18:0] tlbehi_vppn,
+    
+    // TLBELO0 outputs
+    output wire        tlbelo0_v,
+    output wire        tlbelo0_d,
+    output wire [ 1:0] tlbelo0_plv,
+    output wire [ 1:0] tlbelo0_mat,
+    output wire        tlbelo0_g,
+    output wire [19:0] tlbelo0_ppn,
+    
+    // TLBELO1 outputs
+    output wire        tlbelo1_v,
+    output wire        tlbelo1_d,
+    output wire [ 1:0] tlbelo1_plv,
+    output wire [ 1:0] tlbelo1_mat,
+    output wire        tlbelo1_g,
+    output wire [19:0] tlbelo1_ppn,
+    
+    // ASID output
+    output wire [ 9:0] tlbasid_asid,
+    
+    // tlbsrch interface
+    input  wire        inst_tlbsrch,
+    input  wire        tlbsrch_got,
+    input  wire [ 3:0] tlbsrch_index,
+    
+    // tlbrd interface
+    input  wire        inst_tlbrd,
+    input  wire        tlbrd_valid,
+    input  wire [18:0] tlbrd_tlbehi_vppn,
+    
+    input  wire [19:0] tlbrd_tlbelo0_ppn,
+    input  wire        tlbrd_tlbelo0_g,
+    input  wire [ 1:0] tlbrd_tlbelo0_mat,
+    input  wire [ 1:0] tlbrd_tlbelo0_plv,
+    input  wire        tlbrd_tlbelo0_d,
+    input  wire        tlbrd_tlbelo0_v,
+    
+    input  wire [19:0] tlbrd_tlbelo1_ppn,
+    input  wire        tlbrd_tlbelo1_g,
+    input  wire [ 1:0] tlbrd_tlbelo1_mat,
+    input  wire [ 1:0] tlbrd_tlbelo1_plv,
+    input  wire        tlbrd_tlbelo1_d,
+    input  wire        tlbrd_tlbelo1_v,
+    
+    input  wire [ 5:0] tlbrd_tlbidx_ps,
+    input  wire [ 9:0] tlbrd_asid_asid,
+    
+    // TLB reflush
+    input  wire        tlb_reflush,
+    input  wire [31:0] tlb_reflush_pc,
+    
+    // TLB refill exception
+    input  wire        out_ex_tlb_refill,
+    
+    // ESTAT ecode output
+    output wire [ 5:0] stat_ecode,
+    
+    // WB crush with tlbsrch
+    input  wire        if_wb_crush_tlbsrch,
+    
+    // s1 TLB search results (for tlbsrch)
+    input  wire        s1_found,
+    input  wire [ 3:0] s1_index,
+    input  wire [ 9:0] s1_asid
 );
 
     // ----------------------------------------
@@ -500,5 +577,35 @@ module csr_reg (
     assign w_tlb_d1   = csr_tlbelo1_d;
     assign w_tlb_v1   = csr_tlbelo1_v;
 
+    // ====== mycpu_sram expected outputs ======
+    // TLBIDX outputs
+    assign tlbidx_index = csr_tlbidx_index;
+    assign tlbidx_ps    = csr_tlbidx_ps;
+    assign tlbidx_ne    = csr_tlbidx_ne;
+    
+    // TLBEHI output
+    assign tlbehi_vppn  = csr_tlbehi_vppn;
+    
+    // TLBELO0 outputs
+    assign tlbelo0_v    = csr_tlbelo0_v;
+    assign tlbelo0_d    = csr_tlbelo0_d;
+    assign tlbelo0_plv  = csr_tlbelo0_plv;
+    assign tlbelo0_mat  = csr_tlbelo0_mat;
+    assign tlbelo0_g    = csr_tlbelo0_g;
+    assign tlbelo0_ppn  = csr_tlbelo0_ppn[19:0];
+    
+    // TLBELO1 outputs
+    assign tlbelo1_v    = csr_tlbelo1_v;
+    assign tlbelo1_d    = csr_tlbelo1_d;
+    assign tlbelo1_plv  = csr_tlbelo1_plv;
+    assign tlbelo1_mat  = csr_tlbelo1_mat;
+    assign tlbelo1_g    = csr_tlbelo1_g;
+    assign tlbelo1_ppn  = csr_tlbelo1_ppn[19:0];
+    
+    // ASID output
+    assign tlbasid_asid = csr_asid_asid;
+    
+    // ESTAT ecode output
+    assign stat_ecode   = csr_estat_ecode;
 
 endmodule

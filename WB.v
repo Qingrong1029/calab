@@ -132,7 +132,11 @@ module WB (
     input  [5:0]                stat_ecode,
 
     //tlb crush
-    output                      if_wb_crush_tlbsrch
+    output                      if_wb_crush_tlbsrch,
+    
+    input                       s1_found,
+    input [3:0]                 s1_index,
+    input [9:0]                 s1_asid
 );
 
     reg             wb_valid;
@@ -158,9 +162,7 @@ module WB (
     wire    [31:0]  wb_wrong_addr;
     wire     [31:0] wb_vaddr;
     wire            wb_ex_id;         // 从ID传来的异常
-    wire    [ 8:0]  wb_esubcode;      // 异常子码
     wire    [ 8:0]  wb_esubcode_tmp;      // 异常子码
-    wire    [ 5:0]  wb_ecode;         // 异常编码
     
     assign tlbsrch_got   = s1_found;
     assign tlbsrch_index = s1_index;
