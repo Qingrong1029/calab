@@ -11,7 +11,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [375:0] id_ex_bus,
+    output  [343:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 

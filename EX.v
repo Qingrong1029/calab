@@ -5,7 +5,7 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [375:0] id_ex_bus,
+    input   [343:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
@@ -87,7 +87,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [375:0] id_ex_bus_vld;
+    reg     [343:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
@@ -318,12 +318,12 @@ module EX (
                                                  4'b1100
                     ) : inst_st_w ? 4'b1111 : 4'b0000
                 ) : 4'b0000;  // ERTN flush 时禁止写
-    assign  data_sram_size = (mem_type[1:0] == 2'b01) ? 2'h1 : 
+    assign data_sram_size = (mem_type[1:0] == 2'b01) ? 2'h1 : 
                              (mem_type[1:0] == 2'b11) ? 2'h2 : 
                               2'h0;
-    assign  data_sram_addr = alu_result[31:0];
-    assign  data_sram_wdata = st_data;
-    assign  ex_mem_bus = {
+    assign data_sram_addr = alu_result[31:0];
+    assign data_sram_wdata = st_data;
+    assign ex_mem_bus = {
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
         ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
         ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode,
