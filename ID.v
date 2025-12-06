@@ -429,7 +429,7 @@ module ID (
     assign dst_is_r1     = inst_bl;
     assign dst_is_rj     = inst_rdcntid;
     assign id_gr_we      = ~inst_st_w & ~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b &
-                       ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu & ~is_tlb;
+                            ~inst_blt & ~inst_bge & ~inst_bltu & ~inst_bgeu & ~type_tlb;
     assign id_dest       = dst_is_r1 ? 5'd1 :
                            dst_is_rj ? rj   : rd;
 

@@ -8,7 +8,7 @@ module MEM (
 
     output          mem_wb_valid,
     input           wb_allowin,
-    output  [241:0] mem_wb_bus,
+    output  [242:0] mem_wb_bus,
 
     input           data_sram_data_ok,
     input   [31:0]  data_sram_rdata,
@@ -21,8 +21,8 @@ module MEM (
     input           ertn_flush,
     input           reg_ex,
     
-    output       if_mem_crush_tlbsrch,
-    input        tlb_reflush
+    output          if_mem_crush_tlbsrch,
+    input           tlb_reflush
 );
 
     reg             mem_valid;
