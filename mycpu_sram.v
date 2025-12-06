@@ -33,7 +33,7 @@ module mycpu_sram(
     wire    [ 33:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [343:0] id_ex_bus;
+    wire    [375:0] id_ex_bus;
     wire    [ 38:0] wb_id_bus;
     wire    [250:0] ex_mem_bus;
     wire            ex_mem_valid;

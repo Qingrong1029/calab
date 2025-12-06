@@ -11,7 +11,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [343:0] id_ex_bus,
+    output  [375:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
@@ -492,7 +492,7 @@ module ID (
     assign id_ex_bus = {
         id_gr_we, inst_st_w, inst_st_b, inst_st_h, res_from_mem, mem_type,
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
-        id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
+        id_dest, rkd_value, rj_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
         inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode,
         inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op, tlb_zombie
     };

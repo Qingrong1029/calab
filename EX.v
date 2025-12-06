@@ -5,7 +5,7 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [343:0] id_ex_bus,
+    input   [375:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
@@ -87,7 +87,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [343:0] id_ex_bus_vld;
+    reg     [375:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
