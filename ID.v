@@ -6,7 +6,7 @@ module ID (
 
     input           if_id_valid,
     output          id_allowin,
-    input   [96:0]  if_id_bus,
+    input   [97:0]  if_id_bus,
     output  [33:0]  id_if_bus,
 
     input           ex_allowin,
@@ -29,7 +29,7 @@ module ID (
     wire            br_taken;
     wire            br_stall;
     wire    [31:0]  br_target;
-    reg     [96:0]  if_id_bus_vld;
+    reg     [97:0]  if_id_bus_vld;
     wire            id_adef;
     wire    [31:0]  id_wrong_addr;
     
@@ -89,7 +89,7 @@ module ID (
             if_id_bus_vld <= if_id_bus;
         end
     end
-    assign {id_adef,id_wrong_addr, id_pc, id_inst} = if_id_bus_vld;
+    assign {id_adef,id_wrong_addr, id_pc, id_inst, id_tlb_zombie} = if_id_bus_vld;
     //译码
     wire [14:0] alu_op;
     wire [4:0]  inst_invtlb_op;

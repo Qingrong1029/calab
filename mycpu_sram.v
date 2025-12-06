@@ -29,7 +29,7 @@ module mycpu_sram(
 );
     wire            id_allowin;
     wire            if_id_valid;
-    wire    [ 96:0] if_id_bus;
+    wire    [ 97:0] if_id_bus;
     wire    [ 33:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;

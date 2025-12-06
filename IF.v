@@ -5,7 +5,7 @@ module IF (
     input           id_allowin,
     
     output          if_id_valid,
-    output  [96:0]  if_id_bus,
+    output  [97:0]  if_id_bus,
     input   [33:0]  id_if_bus,
     input           wb_ex,
     
@@ -124,7 +124,7 @@ module IF (
                          wb_ex           ? ex_entry      :
                          ertn_flush_reg  ? ertn_entry_reg: 
                          ertn_flush      ? ertn_entry    :
-                         tlb_reflush     ? tlb_reflush_pc:
+                         //tlb_reflush     ? tlb_reflush_pc:
                          br_taken_reg    ? br_target_reg : 
                          if_br_taken     ? br_target     : seq_pc;
     
@@ -195,7 +195,7 @@ module IF (
     assign if_ex_fetch_plv_invalid = if_ppt & s0_found & s0_v & (plv > s0_plv);
     
     assign if_id_bus = {if_adef,if_wrong_addr,if_pc, if_inst,
-                        tlb_zombie, if_ex_fetch_tlb_refill, if_ex_inst_invalid, if_ex_fetch_plv_invalid};
+                        tlb_zombie};
        
     assign  if_adef = if_nextpc[1] | if_nextpc[0];
     assign  if_wrong_addr = if_nextpc;

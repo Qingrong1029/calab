@@ -13,7 +13,7 @@ module csr_reg (
     input  wire [31:0] csr_wmask,
     input  wire [31:0] csr_wvalue,
 
-    // 异常、返�?
+    // 异常、返回
     input  wire        ertn_flush,
     input  wire        wb_ex,
     input  wire [31:0] wb_csr_pc,
@@ -125,10 +125,10 @@ module csr_reg (
     // EENTRY
     reg [25:0] csr_eentry_va;
 
-    // SAVE 寄存�?
+    // SAVE 寄存�?
     reg [31:0] csr_save0, csr_save1, csr_save2, csr_save3;
     
-    // BADV (虚地�?)
+    // BADV (虚地�?)
     reg [31:0] csr_badv_vaddr;
     
     // TID
@@ -179,7 +179,7 @@ module csr_reg (
     reg  [25:0] csr_tlbrentry_pa;
 
     // ----------------------------------------
-    // ====== 各域赋�?��?�辑 ======
+    // ====== 各域赋�?��?�辑 ======
     // ----------------------------------------
 
     // ---------- CRMD.PLV ----------
@@ -206,7 +206,7 @@ module csr_reg (
             csr_crmd_ie <= (csr_wmask[2] & csr_wvalue[2]) | (~csr_wmask[2] & csr_crmd_ie);
     end
 
-    // ---------- CRMD.DA/PG/DATF/DATM（固定�?�） ----------
+    // ---------- CRMD.DA/PG/DATF/DATM（固定�?�） ----------
     assign csr_crmd_da   = 1'b1;
     assign csr_crmd_pg   = 1'b0;
     assign csr_crmd_datf = 2'b00;
