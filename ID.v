@@ -11,7 +11,7 @@ module ID (
 
     input           ex_allowin,
     output          id_ex_valid,
-    output  [374:0] id_ex_bus,
+    output  [375:0] id_ex_bus,
     input   [ 38:0] wb_id_bus,
     input           wb_ex,
 
@@ -20,8 +20,7 @@ module ID (
     input           ertn_flush,
     input           id_has_int,
     
-    output tlb_zombie,
-    input tlb_reflush
+    input           tlb_reflush
 );
     reg             id_valid;
     wire            id_ready_go;
@@ -495,7 +494,7 @@ module ID (
         alu_op, id_div_en, id_div_op,alu_src1, alu_src2,
         id_dest, rkd_value, id_inst, id_pc , id_csr_we, id_csr_re, id_csr_num, id_csr_wmask, id_csr_wvalue, 
         inst_ertn, id_syscall_ex, inst_rdcntvl, inst_rdcntvh,  id_wrong_addr,id_load_op, id_store_op,id_adef,id_ex, id_esubcode, id_ecode,
-        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op, tlb_zombie
     };
 
     assign id_if_bus = {
@@ -572,5 +571,6 @@ module ID (
     assign csr_inst_zombie = (inst_csrwr | inst_csrxchg) && (id_csr_num == `CSR_CRMD || 
                         id_csr_num == `CSR_DMW0 || id_csr_num == `CSR_DMW1 || id_csr_num == `CSR_ASID);
 
-assign tlb_zombie = 0;
+    assign tlb_zombie = tlb_inst_zombie | tlb_self_zombie | csr_inst_zombie;
+
 endmodule

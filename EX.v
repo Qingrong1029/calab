@@ -5,12 +5,12 @@ module EX (
 
     output          ex_allowin,
     input           id_ex_valid,
-    input   [374:0] id_ex_bus,
+    input   [375:0] id_ex_bus,
 
     output          ex_mem_valid,
     input           mem_allowin,
     input           wb_ex,
-    output  [249:0] ex_mem_bus,
+    output  [250:0] ex_mem_bus,
 
     output          data_sram_req,
     output          data_sram_wr,
@@ -87,7 +87,7 @@ module EX (
     wire            ex_ready_go;
     wire    [ 31:0] ex_inst;
     wire    [ 31:0] ex_pc;
-    reg     [374:0] id_ex_bus_vld;
+    reg     [375:0] id_ex_bus_vld;
     wire            ex_bypass;
     wire            ex_ld;
     wire    [  2:0] mem_type;
@@ -96,7 +96,8 @@ module EX (
     wire    [  4:0] ex_load_op;       // 需要从ID阶段传递过来
     wire    [  2:0] ex_store_op;
     wire    [ 31:0] alu_result;
-    wire            ex_div_en;  
+    wire            ex_div_en;
+    wire            tlb_zombie;  
 
     // 增加ALE检测逻辑
     wire ld_ale = ex_load_op[1] & alu_result[0]                        // ld_h地址错
@@ -174,7 +175,7 @@ module EX (
         alu_op, ex_div_en, ex_div_op, alu_src1, alu_src2,
         ex_dest, rkd_value, rj_value, ex_inst, ex_pc, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
         ex_ertn, ex_syscall_ex, ex_rdcntvl, ex_rdcntvh, ex_wrong_addr,ex_load_op, ex_store_op, ex_adef, ex_ex, ex_esubcode, ex_ecode,
-        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, inst_invtlb_op, tlb_zombie
     } = id_ex_bus_vld;
 
     alu my_alu (    
@@ -326,7 +327,7 @@ module EX (
         ex_gr_we, res_from_mem, mem_type, mem_addr_low2,
         ex_dest,ex_pc, ex_inst, ex_final_result, ex_csr_we, ex_csr_re, ex_csr_num, ex_csr_wmask, ex_csr_wvalue, 
         ex_ertn,ex_syscall_ex , final_wrong_addr,ex_ale, ex_adef, final_ex, ex_esubcode, final_ecode,
-        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index, tlb_zombie
     };
 
     // 添加异常优先级处理逻辑

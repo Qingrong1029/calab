@@ -13,19 +13,19 @@ module csr_reg (
     input  wire [31:0] csr_wmask,
     input  wire [31:0] csr_wvalue,
 
-    // 异常、返回
+    // 异常、返�?
     input  wire        ertn_flush,
     input  wire        wb_ex,
     input  wire [31:0] wb_csr_pc,
     input  wire [31:0] wb_vaddr,
     input  wire [5:0]  wb_ecode,
     input  wire [8:0]  wb_esubcode,
-    output  wire [31:0] ertn_entry,
+    output wire [31:0] ertn_entry,
     output wire [31:0] ex_entry,
     output wire        has_int,
     
     input  wire [7:0]  hw_int_in,
-    input              ipi_int_in,
+    input  wire        ipi_int_in,
     
     input  wire [31:0] coreid_in,
 
@@ -51,23 +51,6 @@ module csr_reg (
     input  wire        r_tlb_d1,
     input  wire        r_tlb_v1,
 
-    output wire        w_tlb_e,
-    output wire [ 5:0] w_tlb_ps,
-    output wire [18:0] w_tlb_vppn,
-    output wire [ 9:0] w_tlb_asid,
-    output wire        w_tlb_g,
-    output wire [19:0] w_tlb_ppn0,
-    output wire [ 1:0] w_tlb_plv0,
-    output wire [ 1:0] w_tlb_mat0,
-    output wire        w_tlb_d0,
-    output wire        w_tlb_v0,
-    output wire [19:0] w_tlb_ppn1,
-    output wire [ 1:0] w_tlb_plv1,
-    output wire [ 1:0] w_tlb_mat1,
-    output wire        w_tlb_d1,
-    output wire        w_tlb_v1,
-
-    // ========== mycpu_sram expected ports ==========
     // IF stage exception signals
     input  wire        if_fetch_plv_ex,
     input  wire        if_fetch_tlb_refill,
@@ -99,33 +82,6 @@ module csr_reg (
     // ASID output
     output wire [ 9:0] tlbasid_asid,
     
-    // tlbsrch interface
-    input  wire        inst_tlbsrch,
-    input  wire        tlbsrch_got,
-    input  wire [ 3:0] tlbsrch_index,
-    
-    // tlbrd interface
-    input  wire        inst_tlbrd,
-    input  wire        tlbrd_valid,
-    input  wire [18:0] tlbrd_tlbehi_vppn,
-    
-    input  wire [19:0] tlbrd_tlbelo0_ppn,
-    input  wire        tlbrd_tlbelo0_g,
-    input  wire [ 1:0] tlbrd_tlbelo0_mat,
-    input  wire [ 1:0] tlbrd_tlbelo0_plv,
-    input  wire        tlbrd_tlbelo0_d,
-    input  wire        tlbrd_tlbelo0_v,
-    
-    input  wire [19:0] tlbrd_tlbelo1_ppn,
-    input  wire        tlbrd_tlbelo1_g,
-    input  wire [ 1:0] tlbrd_tlbelo1_mat,
-    input  wire [ 1:0] tlbrd_tlbelo1_plv,
-    input  wire        tlbrd_tlbelo1_d,
-    input  wire        tlbrd_tlbelo1_v,
-    
-    input  wire [ 5:0] tlbrd_tlbidx_ps,
-    input  wire [ 9:0] tlbrd_asid_asid,
-    
     // TLB reflush
     input  wire        tlb_reflush,
     input  wire [31:0] tlb_reflush_pc,
@@ -137,12 +93,8 @@ module csr_reg (
     output wire [ 5:0] stat_ecode,
     
     // WB crush with tlbsrch
-    input  wire        if_wb_crush_tlbsrch,
+    input  wire        if_wb_crush_tlbsrch
     
-    // s1 TLB search results (for tlbsrch)
-    input  wire        s1_found,
-    input  wire [ 3:0] s1_index,
-    input  wire [ 9:0] s1_asid
 );
 
     // ----------------------------------------
@@ -173,10 +125,10 @@ module csr_reg (
     // EENTRY
     reg [25:0] csr_eentry_va;
 
-    // SAVE 寄存器
+    // SAVE 寄存�?
     reg [31:0] csr_save0, csr_save1, csr_save2, csr_save3;
     
-    // BADV (虚地址)
+    // BADV (虚地�?)
     reg [31:0] csr_badv_vaddr;
     
     // TID
@@ -227,7 +179,7 @@ module csr_reg (
     reg  [25:0] csr_tlbrentry_pa;
 
     // ----------------------------------------
-    // ====== 各域赋值逻辑 ======
+    // ====== 各域赋�?��?�辑 ======
     // ----------------------------------------
 
     // ---------- CRMD.PLV ----------
@@ -254,7 +206,7 @@ module csr_reg (
             csr_crmd_ie <= (csr_wmask[2] & csr_wvalue[2]) | (~csr_wmask[2] & csr_crmd_ie);
     end
 
-    // ---------- CRMD.DA/PG/DATF/DATM（固定值） ----------
+    // ---------- CRMD.DA/PG/DATF/DATM（固定�?�） ----------
     assign csr_crmd_da   = 1'b1;
     assign csr_crmd_pg   = 1'b0;
     assign csr_crmd_datf = 2'b00;
@@ -557,25 +509,6 @@ module csr_reg (
     
     wire int_pending = |(csr_estat_is[11:0] & csr_ecfg_lie[11:0]);
     assign has_int = csr_crmd_ie && int_pending;
-
-    // ====== TLB 读写接口 ======
-    assign w_tlb_e    = ~csr_tlbidx_ne;
-    assign w_tlb_ps   =  csr_tlbidx_ps;
-    assign w_tlb_vppn =  csr_tlbehi_vppn;
-    assign w_tlb_asid =  csr_asid_asid;
-    assign w_tlb_g    =  csr_tlbelo0_g & csr_tlbelo1_g;
-
-    assign w_tlb_ppn0 = csr_tlbelo0_ppn[19:0];
-    assign w_tlb_plv0 = csr_tlbelo0_plv;
-    assign w_tlb_mat0 = csr_tlbelo0_mat;
-    assign w_tlb_d0   = csr_tlbelo0_d;
-    assign w_tlb_v0   = csr_tlbelo0_v;
-
-    assign w_tlb_ppn1 = csr_tlbelo1_ppn[19:0];
-    assign w_tlb_plv1 = csr_tlbelo1_plv;
-    assign w_tlb_mat1 = csr_tlbelo1_mat;
-    assign w_tlb_d1   = csr_tlbelo1_d;
-    assign w_tlb_v1   = csr_tlbelo1_v;
 
     // ====== mycpu_sram expected outputs ======
     // TLBIDX outputs

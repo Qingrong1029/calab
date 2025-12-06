@@ -33,13 +33,13 @@ module mycpu_sram(
     wire    [ 33:0] id_if_bus;
     wire            ex_allowin;
     wire            id_ex_valid;
-    wire    [342:0] id_ex_bus;
+    wire    [343:0] id_ex_bus;
     wire    [ 38:0] wb_id_bus;
-    wire    [249:0] ex_mem_bus;
+    wire    [250:0] ex_mem_bus;
     wire            ex_mem_valid;
     wire            mem_allowin;
     wire            mem_wb_valid;
-    wire    [241:0] mem_wb_bus;
+    wire    [242:0] mem_wb_bus;
     wire            wb_allowin;
     wire    [ 54:0] mem_id_bus;
     wire    [ 55:0] ex_id_bus;
@@ -462,42 +462,6 @@ module mycpu_sram(
         .w_d1               (w_d1),
         .w_v1               (w_v1),
         
-        .r_index            (r_index),
-        .r_e                (r_e),
-        .r_vppn             (r_vppn),
-        .r_ps               (r_ps),
-        .r_asid             (r_asid),
-        .r_g                (r_g),
-        
-        .r_ppn0             (r_ppn0),
-        .r_plv0             (r_plv0),
-        .r_mat0             (r_mat0),
-        .r_d0               (r_d0),
-        .r_v0               (r_v0),
-        
-        .r_ppn1             (r_ppn1),
-        .r_plv1             (r_plv1),
-        .r_mat1             (r_mat1),
-        .r_d1               (r_d1),
-        .r_v1               (r_v1),
-        
-        .tlbrd_tlbelo0_ppn  (tlbrd_tlbelo0_ppn),
-        .tlbrd_tlbelo0_g    (tlbrd_tlbelo0_g),
-        .tlbrd_tlbelo0_mat  (tlbrd_tlbelo0_mat),
-        .tlbrd_tlbelo0_plv  (tlbrd_tlbelo0_plv),
-        .tlbrd_tlbelo0_d    (tlbrd_tlbelo0_d),
-        .tlbrd_tlbelo0_v    (tlbrd_tlbelo0_v),
-        
-        .tlbrd_tlbelo1_ppn  (tlbrd_tlbelo1_ppn),
-        .tlbrd_tlbelo1_g    (tlbrd_tlbelo1_g),
-        .tlbrd_tlbelo1_mat  (tlbrd_tlbelo1_mat),
-        .tlbrd_tlbelo1_plv  (tlbrd_tlbelo1_plv),
-        .tlbrd_tlbelo1_d    (tlbrd_tlbelo1_d),
-        .tlbrd_tlbelo1_v    (tlbrd_tlbelo1_v),
-        
-        .tlbrd_tlbidx_ps    (tlbrd_tlbidx_ps),
-        .tlbrd_asid_asid    (tlbrd_asid_asid),
-        
         .tlb_reflush        (tlb_reflush),
         .tlb_reflush_pc     (tlb_reflush_pc),
         
@@ -510,6 +474,7 @@ module mycpu_sram(
         .s1_index           (s1_index),
         .s1_asid            (s1_asid)
     );
+
     csr_reg csr(
         .clk                (clk),
         .resetn             (resetn),
@@ -536,8 +501,28 @@ module mycpu_sram(
 
         .if_fetch_plv_ex    (if_fetch_plv_ex),
         .if_fetch_tlb_refill(if_fetch_tlb_refill),
-        
-        //TLBIDX
+
+        .tlbsrch_we         (inst_tlbsrch),
+        .tlbsrch_hit        (tlbsrch_got),
+        .tlbrd_we           (inst_tlbrd),
+        .tlbsrch_hit_index  (tlbsrch_index),
+        .r_tlb_e            (r_e),
+        .r_tlb_ps           (r_ps),
+        .r_tlb_vppn         (r_vppn),
+        .r_tlb_asid         (r_asid),
+        .r_tlb_g            (r_g),
+        .r_tlb_ppn0         (r_ppn0),
+        .r_tlb_plv0         (r_plv0),
+        .r_tlb_mat0         (r_mat0),
+        .r_tlb_d0           (r_d0),
+        .r_tlb_v0           (r_v0),
+        .r_tlb_ppn1         (r_ppn1),
+        .r_tlb_plv1         (r_plv1),
+        .r_tlb_mat1         (r_mat1),
+        .r_tlb_d1           (r_d1),
+        .r_tlb_v1           (r_v1),
+    
+        //TLBID
         .tlbidx_index       (tlbidx_index),
         .tlbidx_ps          (tlbidx_ps),
         .tlbidx_ne          (tlbidx_ne),
@@ -561,44 +546,14 @@ module mycpu_sram(
         
         //ASID
         .tlbasid_asid       (tlbasid_asid),
-        //tlbsrch
-        .inst_tlbsrch       (inst_tlbsrch),
-        .tlbsrch_got        (tlbsrch_got),
-        .tlbsrch_index      (tlbsrch_index),
-        //tlbrd
-        .inst_tlbrd         (inst_tlbrd),
-        .tlbrd_valid        (tlbrd_valid),
-        
-        .tlbrd_tlbehi_vppn  (tlbrd_tlbehi_vppn),
-        
-        .tlbrd_tlbelo0_ppn  (tlbrd_tlbelo0_ppn),
-        .tlbrd_tlbelo0_g    (tlbrd_tlbelo0_g),
-        .tlbrd_tlbelo0_mat  (tlbrd_tlbelo0_mat),
-        .tlbrd_tlbelo0_plv  (tlbrd_tlbelo0_plv),
-        .tlbrd_tlbelo0_d    (tlbrd_tlbelo0_d),
-        .tlbrd_tlbelo0_v    (tlbrd_tlbelo0_v),
-        
-        .tlbrd_tlbelo1_ppn  (tlbrd_tlbelo1_ppn),
-        .tlbrd_tlbelo1_g    (tlbrd_tlbelo1_g),
-        .tlbrd_tlbelo1_mat  (tlbrd_tlbelo1_mat),
-        .tlbrd_tlbelo1_plv  (tlbrd_tlbelo1_plv),
-        .tlbrd_tlbelo1_d    (tlbrd_tlbelo1_d),
-        .tlbrd_tlbelo1_v    (tlbrd_tlbelo1_v),
-        
-        .tlbrd_tlbidx_ps    (tlbrd_tlbidx_ps),
-        .tlbrd_asid_asid    (tlbrd_asid_asid),
-        
+
         .tlb_reflush        (tlb_reflush),
         .tlb_reflush_pc     (tlb_reflush_pc),
         
         .out_ex_tlb_refill  (ex_tlb_refill),
         .stat_ecode         (stat_ecode),
         
-        .if_wb_crush_tlbsrch (if_ws_crush_with_tlbsrch),
-        
-        .s1_found           (s1_found),
-        .s1_index           (s1_index),
-        .s1_asid            (s1_asid)
+        .if_wb_crush_tlbsrch (if_ws_crush_with_tlbsrch)
     );
 
     tlb my_tlb (

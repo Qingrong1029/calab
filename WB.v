@@ -6,7 +6,7 @@ module WB (
 
     output          wb_allowin,
     input           mem_wb_valid,
-    input   [241:0] mem_wb_bus,
+    input   [242:0] mem_wb_bus,
 
     output  [ 38:0] wb_id_bus,
 
@@ -30,117 +30,77 @@ module WB (
     output  [ 8:0]  wb_esubcode,
     output  [31:0]  wb_vaddr,
    
-    output                      if_fetch_plv_ex,
-    output                      if_fetch_tlb_refill,
+    output          if_fetch_plv_ex,
+    output          if_fetch_tlb_refill,
 
     //tlbsrch
-    output                      inst_tlbsrch,
-    output                      tlbsrch_got,
-    output [3:0]                tlbsrch_index,
+    output          inst_tlbsrch,
+    output          tlbsrch_got,
+    output [3:0]    tlbsrch_index,
 
     //tlbrd
-    input [3:0]                 tlbidx_index,     //from csr
-    output                      inst_tlbrd,
-    output                      tlbrd_valid,
+    input [3:0]     tlbidx_index,     //from csr
+    output          inst_tlbrd,
+    output          tlbrd_valid,
 
     //tlbwr
-    input  [9:0]                tlbasid_asid,
+    input  [9:0]    tlbasid_asid,
+    input  [5:0]    tlbidx_ps,
+    input           tlbidx_ne,
 
-    //input  [3:0]                tlbidx_index,
-    input  [5:0]                tlbidx_ps,
-    input                       tlbidx_ne,
+    input  [18:0]   tlbehi_vppn,
+    output [18:0]   tlbrd_tlbehi_vppn,
 
-    input  [18:0]               tlbehi_vppn,
-    output [18:0]               tlbrd_tlbehi_vppn,
+    input           tlbelo0_v,
+    input           tlbelo0_d,
+    input  [1:0]    tlbelo0_plv,
+    input  [1:0]    tlbelo0_mat,
+    input           tlbelo0_g,
+    input  [19:0]   tlbelo0_ppn,
 
-    input                       tlbelo0_v,
-    input                       tlbelo0_d,
-    input  [1:0]                tlbelo0_plv,
-    input  [1:0]                tlbelo0_mat,
-    input                       tlbelo0_g,
-    input  [19:0]               tlbelo0_ppn,
+    input           tlbelo1_v,
+    input           tlbelo1_d,
+    input  [1:0]    tlbelo1_plv,
+    input  [1:0]    tlbelo1_mat,
+    input           tlbelo1_g,
+    input  [19:0]   tlbelo1_ppn,
 
-    input                       tlbelo1_v,
-    input                       tlbelo1_d,
-    input  [1:0]                tlbelo1_plv,
-    input  [1:0]                tlbelo1_mat,
-    input                       tlbelo1_g,
-    input  [19:0]               tlbelo1_ppn,
+    output          we,
+    output [3:0]    w_index,
+    output          w_e,
+    output [18:0]   w_vppn,
+    output [5:0]    w_ps,
+    output [9:0]    w_asid,
+    output          w_g,
 
-    output                      we,
-    output [3:0]                w_index,
-    output                      w_e,
-    output [18:0]               w_vppn,
-    output [5:0]                w_ps,
-    output [9:0]                w_asid,
-    output                      w_g,
+    output [19:0]   w_ppn0,
+    output [1:0]    w_plv0,
+    output [1:0]    w_mat0,
+    output          w_d0,
+    output          w_v0,
 
-    output [19:0]               w_ppn0,
-    output [1:0]                w_plv0,
-    output [1:0]                w_mat0,
-    output                      w_d0,
-    output                      w_v0,
-
-    output [19:0]               w_ppn1,
-    output [1:0]                w_plv1,
-    output [1:0]                w_mat1,
-    output                      w_d1,
-    output                      w_v1,
-    
-    output [3:0]                r_index,
-    input                       r_e,
-    input  [18:0]               r_vppn,
-    input  [5:0]                r_ps,
-    input  [9:0]                r_asid,
-    input                       r_g,
-
-    input [19:0]                  r_ppn0,
-    input [1:0]                   r_plv0,
-    input [1:0]                   r_mat0,
-    input                         r_d0,
-    input                         r_v0,
-
-    input [19:0]                  r_ppn1,
-    input [1:0]                   r_plv1,
-    input [1:0]                   r_mat1,
-    input                         r_d1,
-    input                         r_v1,
-
-    //for tlbrd
-    output [19:0]               tlbrd_tlbelo0_ppn,
-    output                      tlbrd_tlbelo0_g,
-    output [1:0]                tlbrd_tlbelo0_mat,
-    output [1:0]                tlbrd_tlbelo0_plv,
-    output                      tlbrd_tlbelo0_d,
-    output                      tlbrd_tlbelo0_v,
-
-    output [19:0]               tlbrd_tlbelo1_ppn,
-    output                      tlbrd_tlbelo1_g,
-    output [1:0]                tlbrd_tlbelo1_mat,
-    output [1:0]                tlbrd_tlbelo1_plv,
-    output                      tlbrd_tlbelo1_d,
-    output                      tlbrd_tlbelo1_v,
-
-    output [5:0]                tlbrd_tlbidx_ps,
-    output [9:0]                tlbrd_asid_asid,
-
+    output [19:0]   w_ppn1,
+    output [1:0]    w_plv1,
+    output [1:0]    w_mat1,
+    output          w_d1,
+    output          w_v1,
+    output [3:0]    r_index,
     //tlb_reflush
-    output                      tlb_reflush,
-    output [31:0]               tlb_reflush_pc,
+    output          tlb_reflush,
+    output [31:0]   tlb_reflush_pc,
 
-    output                      out_ex_tlb_refill,
-    input  [5:0]                stat_ecode,
+    output          out_ex_tlb_refill,
+    input  [5:0]    stat_ecode,
 
     //tlb crush
-    output                      if_wb_crush_tlbsrch,
-    
-    input                       s1_found,
-    input [3:0]                 s1_index,
-    input [9:0]                 s1_asid
+    output          if_wb_crush_tlbsrch,
+    input           s1_found,
+    input [3:0]     s1_index,
+    input [9:0]     s1_asid
 );
 
     reg             wb_valid;
-    reg     [231:0] mem_wb_bus_vld;
+    reg     [242:0] mem_wb_bus_vld;
     wire            wb_ready_go;
     wire            wb_gr_we;
     wire            rf_we;
@@ -168,7 +128,6 @@ module WB (
     assign tlbsrch_index = s1_index;
     
     //for tlbrd
-    assign tlbrd_valid = r_e;
     assign r_index = tlbidx_index;
     //for tlbwr
     reg [3:0] random_index;
@@ -202,32 +161,15 @@ module WB (
     assign w_d1   = tlbelo1_d;
     assign w_v1   = tlbelo1_v;
     
-    assign tlbrd_tlbehi_vppn = r_vppn;
-    assign tlbrd_tlbelo0_ppn = r_ppn0;
-    assign tlbrd_tlbelo0_g   = r_g;
-    assign tlbrd_tlbelo0_mat = r_mat0;
-    assign tlbrd_tlbelo0_plv = r_plv0;
-    assign tlbrd_tlbelo0_d   = r_d0;
-    assign tlbrd_tlbelo0_v   = r_v0;
-    
-    assign tlbrd_tlbelo1_ppn = r_ppn1;
-    assign tlbrd_tlbelo1_g   = r_g;
-    assign tlbrd_tlbelo1_mat = r_mat1;
-    assign tlbrd_tlbelo1_plv = r_plv1;
-    assign tlbrd_tlbelo1_d   = r_d1;
-    assign tlbrd_tlbelo1_v   = r_v1;
-    
-    assign tlbrd_tlbidx_ps   = r_ps;
-    assign tlbrd_asid_asid   = r_asid;
-    
+
     wire if_csr_crush_with_tlbsrch;
     assign if_csr_crush_with_tlbsrch = csr_we && (csr_num == `CSR_ASID 
                                                || csr_num == `CSR_TLBEHI);
     wire if_tlbrd_crush_with_tlbsrch;
     assign if_tlbrd_crush_with_tlbsrch = inst_tlbrd;
 
-assign if_ws_crush_with_tlbsrch = if_csr_crush_with_tlbsrch
-                                || if_tlbrd_crush_with_tlbsrch;
+    assign if_ws_crush_with_tlbsrch = if_csr_crush_with_tlbsrch
+                                    || if_tlbrd_crush_with_tlbsrch;
     
     assign wb_ready_go = 1'b1;
     assign wb_allowin = wb_ready_go | ~wb_valid;
@@ -253,26 +195,30 @@ assign if_ws_crush_with_tlbsrch = if_csr_crush_with_tlbsrch
     assign  {
         wb_gr_we, wb_pc, wb_inst, final_result, wb_dest,
         wb_csr_we, wb_csr_re, wb_csr_num, wb_csr_wmask, wb_csr_wvalue, wb_ertn, wb_syscall_ex, wb_wrong_addr, wb_ex_id, wb_esubcode_tmp, wb_ecode,
-        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index
+        inst_tlbsrch, inst_tlbrd, inst_tlbwr, inst_tlbfill, inst_invtlb, s1_found, s1_index, tlb_zombie
     } = mem_wb_bus_vld;
+
     assign  rf_we = wb_valid & wb_gr_we & ~wb_ex;
     assign  rf_waddr = wb_dest; 
     assign  rf_wdata = wb_wdata;
     assign  wb_id_bus = {
         rf_we, rf_waddr, rf_wdata, csr_re
     };
-    assign wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
-    assign wb_esubcode = wb_ex_id ? wb_esubcode_tmp : 9'b0;  // syscall没有子编码
-    assign wb_csr_pc = wb_pc;
-    assign ertn_flush = wb_valid & wb_ertn;
-    //csr
-    assign wb_wdata = csr_re ? csr_rvalue : final_result;
-    assign csr_num = wb_csr_num;
-    assign csr_re = wb_csr_re | wb_csr_we;
-    assign csr_we = wb_csr_we;
-    assign csr_wvalue = wb_csr_wvalue;
-    assign csr_wmask = wb_csr_wmask;
-    assign wb_vaddr  = wb_wrong_addr;
+    assign  wb_ex = wb_valid & wb_ex_id ;//可以加别的异常
+    assign  wb_esubcode = wb_ex_id ? wb_esubcode_tmp : 9'b0;  // syscall没有子编码
+    assign  wb_csr_pc = wb_pc;
+    assign  ertn_flush = wb_valid & wb_ertn;
+    //csr 
+    assign  wb_wdata = csr_re ? csr_rvalue : final_result;
+    assign  csr_num = wb_csr_num;
+    assign  csr_re = wb_csr_re | wb_csr_we;
+    assign  csr_we = wb_csr_we;
+    assign  csr_wvalue = wb_csr_wvalue;
+    assign  csr_wmask = wb_csr_wmask;
+    assign  wb_vaddr  = wb_wrong_addr;
+    assign  tlb_reflush_pc = wb_pc;
+    assign  tlb_reflush = tlb_zombie;
+
 
     assign  debug_wb_pc = wb_pc;
     assign  debug_wb_rf_we = {4{rf_we}};
